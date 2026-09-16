@@ -301,7 +301,7 @@ export function getInitialSeedData(): { customers: Customer[]; loans: Loan[]; fo
       outcome: 'Interested - Needs New Loan',
       notes: 'Spoke with Ramesh. He was delighted with previous HDFC process. Asked to share quotation for 7 Lakhs home renovation loan.',
       nextFollowUpDate: formatDateOffset(0, 2),
-      agentName: "Dad's Desk",
+      agentName: 'Galaxy Desk',
       createdAt: formatDateOffset(0, -3),
     },
     {
@@ -313,7 +313,7 @@ export function getInitialSeedData(): { customers: Customer[]; loans: Loan[]; fo
       outcome: 'Call Back Later',
       notes: 'Sunita was busy at the shop. Requested call back tomorrow after 3 PM.',
       nextFollowUpDate: formatDateOffset(0, 1),
-      agentName: "Dad's Desk",
+      agentName: 'Galaxy Desk',
       createdAt: formatDateOffset(0, -1),
     },
   ];

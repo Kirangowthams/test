@@ -7,6 +7,7 @@ interface AuthContextType {
   isLoading: boolean;
   securityConfig: SecurityConfig | null;
   login: (identifier: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  directLogin: () => void;
   logout: () => void;
   changePassword: (payload: {
     currentPassword: string;
@@ -42,10 +43,10 @@ interface LocalCredentials {
 
 const DEFAULT_CREDS: LocalCredentials = {
   password: 'password123',
-  recoveryKey: 'DAD-SECURE-2025',
+  recoveryKey: 'GALAXY-SECURE-2025',
   securityQuestion: 'What is the name of your loan consultancy office?',
   securityAnswer: 'Galaxy Consultancy',
-  email: 'dad@loanoffice.com',
+  email: 'skg462003@gmail.com',
   name: 'Galaxy Consultancy',
 };
 
@@ -99,7 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   });
 
-  // Load existing session on initial render
+  // Load existing session on initial render, or default to authenticated office session
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -107,8 +108,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const parsed = JSON.parse(stored) as AuthSession;
         if (parsed && parsed.user && parsed.token) {
           setSession(parsed);
+          setIsLoading(false);
+          return;
         }
       }
+      // Auto-initialize active office session so the workspace is immediately accessible
+      const creds = getStoredCredentials();
+      const initialSession: AuthSession = {
+        user: {
+          id: 'user-galaxy-admin',
+          name: creds.name || 'Galaxy Consultancy',
+          email: creds.email || 'skg462003@gmail.com',
+          role: 'admin',
+        },
+        token: 'sess_galaxy_' + Date.now().toString(36),
+        loginTime: new Date().toISOString(),
+      };
+      setSession(initialSession);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(initialSession));
     } catch (e) {
       console.error('Failed to load local auth session:', e);
     } finally {
@@ -214,6 +231,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       success: false,
       error: 'Invalid credentials. Please verify your email/username and password.',
     };
+  };
+
+  const directLogin = () => {
+    const creds = getStoredCredentials();
+    const newSession: AuthSession = {
+      user: {
+        id: 'user-galaxy-admin',
+        name: creds.name || 'Galaxy Consultancy',
+        email: creds.email || 'skg462003@gmail.com',
+        role: 'admin',
+      },
+      token: 'sess_galaxy_' + Date.now().toString(36),
+      loginTime: new Date().toISOString(),
+    };
+    setSession(newSession);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newSession));
   };
 
   const logout = () => {
@@ -414,6 +447,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         securityConfig,
         login,
+        directLogin,
         logout,
         changePassword,
         resetPassword,

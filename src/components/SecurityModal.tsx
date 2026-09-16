@@ -36,7 +36,7 @@ export const SecurityModal: React.FC<SecurityModalProps> = ({ isOpen, onClose })
 
   // Recovery Config state
   const [name, setName] = useState(session?.user?.name || 'Galaxy Consultancy');
-  const [email, setEmail] = useState(session?.user?.email || 'dad@loanoffice.com');
+  const [email, setEmail] = useState(session?.user?.email || 'skg462003@gmail.com');
   const [securityQuestion, setSecurityQuestion] = useState(
     securityConfig?.securityQuestion || 'What is the name of your loan consultancy office?'
   );

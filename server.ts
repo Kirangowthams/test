@@ -20,10 +20,10 @@ export interface AuthConfig {
 }
 
 const DEFAULT_AUTH: AuthConfig = {
-  email: 'dad@loanoffice.com',
+  email: 'skg462003@gmail.com',
   name: 'Galaxy Consultancy',
   password: 'password123',
-  recoveryKey: 'DAD-SECURE-2025',
+  recoveryKey: 'GALAXY-SECURE-2025',
   securityQuestion: 'What is the name of your loan consultancy office?',
   securityAnswer: 'Galaxy Consultancy',
 };

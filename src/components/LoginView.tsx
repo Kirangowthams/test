@@ -19,15 +19,15 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
 export const LoginView: React.FC = () => {
-  const { login, resetPassword, securityConfig } = useAuth();
+  const { login, resetPassword, securityConfig, directLogin } = useAuth();
   const { isDark, toggleTheme } = useTheme();
 
   const [mode, setMode] = useState<'login' | 'reset'>('login');
   const [resetMethod, setResetMethod] = useState<'key' | 'question'>('key');
 
   // Login form state
-  const [identifier, setIdentifier] = useState('dad@loanoffice.com');
-  const [password, setPassword] = useState('password123');
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -97,24 +97,7 @@ export const LoginView: React.FC = () => {
       setResetError(result.error || 'Failed to reset password. Please check your verification key/answer.');
     } else {
       setResetSuccess(result.message || 'Password successfully updated! You are now authenticated.');
-      // After a brief moment, will automatically be authenticated via AuthContext
     }
-  };
-
-  const autofillCredentials = () => {
-    setIdentifier('dad@loanoffice.com');
-    setPassword('password123');
-    setLoginError(null);
-  };
-
-  const autofillRecoveryKey = () => {
-    setRecoveryKey('DAD-SECURE-2025');
-    setResetError(null);
-  };
-
-  const autofillSecurityAnswer = () => {
-    setSecurityAnswer('Galaxy Consultancy');
-    setResetError(null);
   };
 
   return (
@@ -192,7 +175,7 @@ export const LoginView: React.FC = () => {
                     type="text"
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
-                    placeholder="galaxy consultancy or dad@loanoffice.com"
+                    placeholder="Enter email or username"
                     className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 hover:bg-slate-100/60 dark:hover:bg-slate-750 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
                   />
                 </div>
@@ -222,7 +205,7 @@ export const LoginView: React.FC = () => {
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter password"
+                    placeholder="Enter your password"
                     className="w-full pl-3 pr-10 py-2 text-sm bg-slate-50 dark:bg-slate-800 hover:bg-slate-100/60 dark:hover:bg-slate-750 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
                   />
                   <button
@@ -253,24 +236,17 @@ export const LoginView: React.FC = () => {
                 )}
               </button>
 
-              {/* Quick autofill helper for convenience */}
-              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
-                <div className="p-2.5 rounded-lg bg-blue-50/70 dark:bg-blue-950/50 border border-blue-200/80 dark:border-blue-800/80 flex items-center justify-between text-xs">
-                  <div className="space-y-0.5">
-                    <span className="text-slate-600 dark:text-slate-400 text-[11px] block font-medium">Default Office Login:</span>
-                    <span className="font-mono text-xs text-blue-900 dark:text-blue-300 font-bold">
-                      galaxy consultancy / password123
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={autofillCredentials}
-                    className="px-2.5 py-1 text-[11px] font-bold text-blue-700 dark:text-blue-300 bg-white dark:bg-slate-800 hover:bg-blue-100 dark:hover:bg-slate-700 border border-blue-300 dark:border-blue-700 rounded shadow-2xs cursor-pointer flex items-center gap-1"
-                  >
-                    <Sparkles className="w-3 h-3 text-amber-500" />
-                    <span>Autofill</span>
-                  </button>
-                </div>
+              {/* Direct 1-Click Access */}
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  id="direct-enter-btn"
+                  type="button"
+                  onClick={directLogin}
+                  className="w-full py-2 px-3 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-slate-200 dark:border-slate-700"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                  <span>Enter Dashboard Directly</span>
+                </button>
               </div>
             </form>
           ) : (
@@ -343,7 +319,7 @@ export const LoginView: React.FC = () => {
               {/* Reset via Master Key */}
               {resetMethod === 'key' ? (
                 <div className="space-y-2">
-                  <label className="block text-xs font-bold text-slate-700">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                     Master Recovery Key
                   </label>
                   <input
@@ -351,28 +327,21 @@ export const LoginView: React.FC = () => {
                     type="text"
                     value={recoveryKey}
                     onChange={(e) => setRecoveryKey(e.target.value)}
-                    placeholder="e.g. DAD-SECURE-2025"
-                    className="w-full px-3 py-2 text-sm bg-slate-50 hover:bg-slate-100/60 focus:bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono"
+                    placeholder="Enter your recovery key"
+                    className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 hover:bg-slate-100/60 dark:hover:bg-slate-750 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono"
                   />
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
-                    <span>Default Key: <strong className="font-mono text-slate-700">DAD-SECURE-2025</strong></span>
-                    <button
-                      type="button"
-                      onClick={autofillRecoveryKey}
-                      className="text-blue-600 hover:underline font-semibold cursor-pointer"
-                    >
-                      Fill Key
-                    </button>
-                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Enter the office recovery key configured in your security settings.
+                  </p>
                 </div>
               ) : (
                 /* Reset via Security Question */
                 <div className="space-y-2">
-                  <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-200">
-                    <span className="text-[10px] uppercase font-bold text-slate-500 block">
+                  <div className="p-2.5 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block">
                       Security Question:
                     </span>
-                    <p className="text-xs font-bold text-slate-800 mt-0.5">
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-0.5">
                       {securityConfig?.securityQuestion ||
                         'What is the name of your loan consultancy office?'}
                     </p>
@@ -385,19 +354,9 @@ export const LoginView: React.FC = () => {
                     type="text"
                     value={securityAnswer}
                     onChange={(e) => setSecurityAnswer(e.target.value)}
-                    placeholder="e.g. Galaxy Consultancy"
+                    placeholder="Enter secret answer"
                     className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 hover:bg-slate-100/60 dark:hover:bg-slate-750 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                   />
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-0.5">
-                    <span>Default Answer: <strong className="text-slate-700 dark:text-slate-200">Galaxy Consultancy</strong></span>
-                    <button
-                      type="button"
-                      onClick={autofillSecurityAnswer}
-                      className="text-blue-600 dark:text-blue-400 hover:underline font-semibold cursor-pointer"
-                    >
-                      Fill Answer
-                    </button>
-                  </div>
                 </div>
               )}
 
