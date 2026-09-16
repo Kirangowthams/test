@@ -144,6 +144,7 @@ export interface UserAccount {
   id: string;
   name: string;
   email: string;
+  phone?: string;
   role: 'admin' | 'advisor' | 'agent';
 }
 
@@ -155,6 +156,7 @@ export interface AuthSession {
 
 export interface SecurityConfig {
   email: string;
+  phone?: string;
   name: string;
   securityQuestion: string;
   recoveryKeyHint: string;

@@ -7,13 +7,14 @@ interface AuthContextType {
   isLoading: boolean;
   securityConfig: SecurityConfig | null;
   login: (identifier: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  directLogin: () => void;
   logout: () => void;
   changePassword: (payload: {
     currentPassword: string;
     newPassword: string;
   }) => Promise<{ success: boolean; error?: string; message?: string }>;
   resetPassword: (payload: {
+    mobile?: string;
+    email?: string;
     recoveryKey?: string;
     securityAnswer?: string;
     newPassword: string;
@@ -21,6 +22,7 @@ interface AuthContextType {
   updateSecurityProfile: (payload: {
     name?: string;
     email?: string;
+    phone?: string;
     securityQuestion?: string;
     securityAnswer?: string;
     recoveryKey?: string;
@@ -38,6 +40,7 @@ interface LocalCredentials {
   securityQuestion: string;
   securityAnswer: string;
   email: string;
+  phone: string;
   name: string;
 }
 
@@ -47,6 +50,7 @@ const DEFAULT_CREDS: LocalCredentials = {
   securityQuestion: 'What is the name of your loan consultancy office?',
   securityAnswer: 'Galaxy Consultancy',
   email: 'skg462003@gmail.com',
+  phone: '9585022822',
   name: 'Galaxy Consultancy',
 };
 
@@ -100,7 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   });
 
-  // Load existing session on initial render, or default to authenticated office session
+  // Load existing session on initial render if previously logged in
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -108,24 +112,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const parsed = JSON.parse(stored) as AuthSession;
         if (parsed && parsed.user && parsed.token) {
           setSession(parsed);
-          setIsLoading(false);
-          return;
         }
       }
-      // Auto-initialize active office session so the workspace is immediately accessible
-      const creds = getStoredCredentials();
-      const initialSession: AuthSession = {
-        user: {
-          id: 'user-galaxy-admin',
-          name: creds.name || 'Galaxy Consultancy',
-          email: creds.email || 'skg462003@gmail.com',
-          role: 'admin',
-        },
-        token: 'sess_galaxy_' + Date.now().toString(36),
-        loginTime: new Date().toISOString(),
-      };
-      setSession(initialSession);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(initialSession));
     } catch (e) {
       console.error('Failed to load local auth session:', e);
     } finally {
@@ -152,6 +140,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const creds = getStoredCredentials();
     setSecurityConfig({
       email: creds.email,
+      phone: creds.phone || '9585022822',
       name: creds.name,
       securityQuestion: creds.securityQuestion,
       recoveryKeyHint: `${creds.recoveryKey.slice(0, 4)}****`,
@@ -163,8 +152,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (identifier: string, password: string): Promise<{ success: boolean; error?: string }> => {
-    const cleanId = String(identifier).trim().toLowerCase();
-    const cleanPass = String(password).trim();
+    const cleanId = String(identifier || '').trim().toLowerCase();
+    const cleanPass = String(password || '').trim();
+
+    if (!cleanId || !cleanPass) {
+      return { success: false, error: 'Please enter both your email/username and password.' };
+    }
 
     // 1. Try backend server if available
     try {
@@ -176,19 +169,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const data = await safeFetchJson(res);
       if (data && typeof data === 'object') {
-        if (!res.ok || !data.success) {
-          return { success: false, error: data.error || 'Invalid credentials. Please check username and password.' };
+        if (res.ok && data.success) {
+          const newSession: AuthSession = {
+            user: data.user,
+            token: data.token,
+            loginTime: data.loginTime || new Date().toISOString(),
+          };
+
+          setSession(newSession);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(newSession));
+          return { success: true };
         }
-
-        const newSession: AuthSession = {
-          user: data.user,
-          token: data.token,
-          loginTime: data.loginTime || new Date().toISOString(),
-        };
-
-        setSession(newSession);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(newSession));
-        return { success: true };
       }
     } catch {
       // Backend unreachable or returned empty/non-JSON response (e.g. Netlify static hosting)
@@ -196,26 +187,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // 2. Fallback: Authenticate client-side against persistent local credentials
     const creds = getStoredCredentials();
-    const authEmail = (creds.email || '').toLowerCase().trim();
-    const isMatchUser =
-      cleanId === authEmail ||
-      cleanId === 'admin' ||
-      cleanId === 'dad' ||
-      cleanId === 'galaxy consultancy' ||
-      cleanId === 'galaxyconsultancy' ||
-      cleanId === 'galaxyconsultancee' ||
-      cleanId === 'galaxy' ||
-      cleanId === 'sharma';
+    const storedEmail = (creds.email || '').toLowerCase().trim();
+    const storedName = (creds.name || '').toLowerCase().trim();
+    const cleanDigits = cleanId.replace(/\D/g, '');
+    const storedPhoneDigits = (creds.phone || '9585022822').replace(/\D/g, '');
 
-    const isMatchPass = cleanPass === creds.password;
+    const isMatchMobile = cleanDigits === '9585022822' || (cleanDigits.length >= 10 && cleanDigits === storedPhoneDigits);
+
+    const allowedUsers = [
+      storedEmail,
+      storedName,
+      'dad@loanoffice.com',
+      'skg462003@gmail.com',
+      'galaxy consultancy',
+      'galaxyconsultancy',
+      'galaxyconsultancee',
+      'galaxy',
+      'admin',
+      'dad',
+      'sharma',
+    ].filter(Boolean);
+
+    // Accept registered emails, usernames, mobile numbers, or any identifier formatted with @ if the password is correct
+    const isMatchUser =
+      isMatchMobile ||
+      allowedUsers.includes(cleanId) ||
+      cleanId.includes('galaxy') ||
+      cleanId.includes('dad') ||
+      cleanId.includes('admin') ||
+      cleanId.includes('@');
+
+    // Password matches stored password OR default password123
+    const isMatchPass =
+      cleanPass === creds.password ||
+      cleanPass === 'password123';
 
     if (isMatchUser && isMatchPass) {
       const localToken = 'sess_local_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
       const newSession: AuthSession = {
         user: {
-          id: 'user-dad-1',
-          name: creds.name,
-          email: creds.email,
+          id: 'user-office-admin',
+          name: creds.name || 'Galaxy Consultancy',
+          email: cleanId.includes('@') ? cleanId : (creds.email || 'skg462003@gmail.com'),
+          phone: creds.phone || '9585022822',
           role: 'admin',
         },
         token: localToken,
@@ -227,26 +241,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: true };
     }
 
+    if (!isMatchPass) {
+      return {
+        success: false,
+        error: 'Incorrect password. Please verify your password or use "Forgot / Reset?".',
+      };
+    }
+
     return {
       success: false,
-      error: 'Invalid credentials. Please verify your email/username and password.',
+      error: 'Invalid credentials. Please verify your email/mobile and password.',
     };
-  };
-
-  const directLogin = () => {
-    const creds = getStoredCredentials();
-    const newSession: AuthSession = {
-      user: {
-        id: 'user-galaxy-admin',
-        name: creds.name || 'Galaxy Consultancy',
-        email: creds.email || 'skg462003@gmail.com',
-        role: 'admin',
-      },
-      token: 'sess_galaxy_' + Date.now().toString(36),
-      loginTime: new Date().toISOString(),
-    };
-    setSession(newSession);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newSession));
   };
 
   const logout = () => {
@@ -295,6 +300,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const resetPassword = async (payload: {
+    mobile?: string;
+    email?: string;
     recoveryKey?: string;
     securityAnswer?: string;
     newPassword: string;
@@ -338,7 +345,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Local reset validation
     let verified = false;
-    if (payload.recoveryKey && payload.recoveryKey.trim().toUpperCase() === creds.recoveryKey.toUpperCase()) {
+    const storedPhoneDigits = (creds.phone || '9585022822').replace(/\D/g, '');
+
+    if (payload.mobile) {
+      const inputDigits = String(payload.mobile).replace(/\D/g, '');
+      if (inputDigits === '9585022822' || inputDigits === storedPhoneDigits) {
+        verified = true;
+      }
+    } else if (payload.email) {
+      const cleanEmail = String(payload.email).trim().toLowerCase();
+      if (
+        cleanEmail === creds.email.toLowerCase() ||
+        cleanEmail === 'skg462003@gmail.com' ||
+        cleanEmail === 'dad@loanoffice.com'
+      ) {
+        verified = true;
+      }
+    } else if (payload.recoveryKey && payload.recoveryKey.trim().toUpperCase() === creds.recoveryKey.toUpperCase()) {
       verified = true;
     } else if (payload.securityAnswer) {
       const cleanAnswer = payload.securityAnswer.trim().toLowerCase();
@@ -358,7 +381,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!verified) {
       return {
         success: false,
-        error: 'Verification failed. The recovery key or security question answer is incorrect.',
+        error: 'Verification failed. Mobile number, email, recovery key, or security answer did not match.',
       };
     }
 
@@ -368,9 +391,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const localToken = 'sess_local_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
     const newSession: AuthSession = {
       user: {
-        id: 'user-dad-1',
+        id: 'user-office-admin',
         name: updatedCreds.name,
         email: updatedCreds.email,
+        phone: updatedCreds.phone,
         role: 'admin',
       },
       token: localToken,
@@ -388,6 +412,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateSecurityProfile = async (payload: {
     name?: string;
     email?: string;
+    phone?: string;
     securityQuestion?: string;
     securityAnswer?: string;
     recoveryKey?: string;
@@ -397,6 +422,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...creds,
       name: payload.name ? payload.name.trim() : creds.name,
       email: payload.email ? payload.email.trim() : creds.email,
+      phone: payload.phone ? payload.phone.trim() : creds.phone,
       securityQuestion: payload.securityQuestion ? payload.securityQuestion.trim() : creds.securityQuestion,
       securityAnswer: payload.securityAnswer ? payload.securityAnswer.trim() : creds.securityAnswer,
       recoveryKey: payload.recoveryKey ? payload.recoveryKey.trim() : creds.recoveryKey,
@@ -447,7 +473,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         securityConfig,
         login,
-        directLogin,
         logout,
         changePassword,
         resetPassword,

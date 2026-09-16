@@ -12,24 +12,37 @@ import { getInitialSeedData } from '../data/initialData';
 
 const LOCAL_STORAGE_KEY = 'loan_consultancy_offline_backup';
 
+const DEMO_CUSTOMER_IDS = ['cust-1', 'cust-2', 'cust-3', 'cust-4', 'cust-5', 'cust-6', 'cust-7'];
+const DEMO_LOAN_IDS = ['loan-1', 'loan-2', 'loan-3', 'loan-4', 'loan-5', 'loan-6', 'loan-7'];
+const DEMO_FOLLOWUP_IDS = ['fu-1', 'fu-2'];
+
 function getLocalBackup(): { customers: Customer[]; loans: Loan[]; followUps: FollowUpLog[] } {
   try {
     const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed.customers) && Array.isArray(parsed.loans)) {
+        // Strip out old demo members
+        parsed.customers = parsed.customers.filter((c: Customer) => !DEMO_CUSTOMER_IDS.includes(c.id));
+        parsed.loans = parsed.loans.filter((l: Loan) => !DEMO_LOAN_IDS.includes(l.id));
+        parsed.followUps = (parsed.followUps || []).filter((f: FollowUpLog) => !DEMO_FOLLOWUP_IDS.includes(f.id));
         return parsed;
       }
     }
   } catch (err) {
     console.error('Error reading localStorage backup:', err);
   }
-  return getInitialSeedData();
+  return { customers: [], loans: [], followUps: [] };
 }
 
 function saveLocalBackup(data: { customers: Customer[]; loans: Loan[]; followUps: FollowUpLog[] }) {
   try {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+    const cleaned = {
+      customers: (data.customers || []).filter((c) => !DEMO_CUSTOMER_IDS.includes(c.id)),
+      loans: (data.loans || []).filter((l) => !DEMO_LOAN_IDS.includes(l.id)),
+      followUps: (data.followUps || []).filter((f) => !DEMO_FOLLOWUP_IDS.includes(f.id)),
+    };
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cleaned));
   } catch (err) {
     console.error('Error saving localStorage backup:', err);
   }
@@ -66,22 +79,22 @@ export const api = {
       const snap = await getDocs(collection(db, 'customers'));
       if (!snap.empty) {
         const list: Customer[] = [];
-        snap.forEach((d) => list.push(d.data() as Customer));
+        snap.forEach((d) => {
+          const item = d.data() as Customer;
+          if (DEMO_CUSTOMER_IDS.includes(item.id)) {
+            // Delete legacy demo member from Firestore
+            deleteDoc(doc(db, 'customers', item.id)).catch(() => {});
+          } else {
+            list.push(item);
+          }
+        });
         list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
         const current = getLocalBackup();
         saveLocalBackup({ ...current, customers: list });
         return list;
       } else {
-        // Initial seed into Firestore so cloud database starts populated
-        const seed = getInitialSeedData();
-        const batch = writeBatch(db);
-        seed.customers.forEach((c) => {
-          batch.set(doc(db, 'customers', c.id), sanitizeForFirestore(c));
-        });
-        await batch.commit();
         const current = getLocalBackup();
-        saveLocalBackup({ ...current, customers: seed.customers });
-        return seed.customers;
+        return current.customers;
       }
     } catch (err) {
       console.warn('Firestore getCustomers failed, attempting fallback:', err);
@@ -89,8 +102,9 @@ export const api = {
         const res = await fetch('/api/customers');
         if (res.ok) {
           const data = await safeFetchJson<Customer[]>(res);
-          if (Array.isArray(data) && data.length > 0) {
-            return data;
+          if (Array.isArray(data)) {
+            const clean = data.filter((c) => !DEMO_CUSTOMER_IDS.includes(c.id));
+            return clean;
           }
         }
       } catch {
@@ -215,21 +229,21 @@ export const api = {
       const snap = await getDocs(collection(db, 'loans'));
       if (!snap.empty) {
         const list: Loan[] = [];
-        snap.forEach((d) => list.push(d.data() as Loan));
+        snap.forEach((d) => {
+          const item = d.data() as Loan;
+          if (DEMO_LOAN_IDS.includes(item.id)) {
+            deleteDoc(doc(db, 'loans', item.id)).catch(() => {});
+          } else {
+            list.push(item);
+          }
+        });
         list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
         const current = getLocalBackup();
         saveLocalBackup({ ...current, loans: list });
         return list;
       } else {
-        const seed = getInitialSeedData();
-        const batch = writeBatch(db);
-        seed.loans.forEach((l) => {
-          batch.set(doc(db, 'loans', l.id), sanitizeForFirestore(l));
-        });
-        await batch.commit();
         const current = getLocalBackup();
-        saveLocalBackup({ ...current, loans: seed.loans });
-        return seed.loans;
+        return current.loans;
       }
     } catch (err) {
       console.warn('Firestore getLoans failed, using fallback:', err);
@@ -237,8 +251,9 @@ export const api = {
         const res = await fetch('/api/loans');
         if (res.ok) {
           const data = await safeFetchJson<Loan[]>(res);
-          if (Array.isArray(data) && data.length > 0) {
-            return data;
+          if (Array.isArray(data)) {
+            const clean = data.filter((l) => !DEMO_LOAN_IDS.includes(l.id));
+            return clean;
           }
         }
       } catch {
@@ -360,21 +375,21 @@ export const api = {
       const snap = await getDocs(collection(db, 'followups'));
       if (!snap.empty) {
         const list: FollowUpLog[] = [];
-        snap.forEach((d) => list.push(d.data() as FollowUpLog));
+        snap.forEach((d) => {
+          const item = d.data() as FollowUpLog;
+          if (DEMO_FOLLOWUP_IDS.includes(item.id)) {
+            deleteDoc(doc(db, 'followups', item.id)).catch(() => {});
+          } else {
+            list.push(item);
+          }
+        });
         list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
         const current = getLocalBackup();
         saveLocalBackup({ ...current, followUps: list });
         return list;
       } else {
-        const seed = getInitialSeedData();
-        const batch = writeBatch(db);
-        seed.followUps.forEach((f) => {
-          batch.set(doc(db, 'followups', f.id), sanitizeForFirestore(f));
-        });
-        await batch.commit();
         const current = getLocalBackup();
-        saveLocalBackup({ ...current, followUps: seed.followUps });
-        return seed.followUps;
+        return current.followUps;
       }
     } catch (err) {
       console.warn('Firestore getFollowUps failed:', err);
@@ -382,8 +397,9 @@ export const api = {
         const res = await fetch('/api/followups');
         if (res.ok) {
           const data = await safeFetchJson<FollowUpLog[]>(res);
-          if (Array.isArray(data) && data.length > 0) {
-            return data;
+          if (Array.isArray(data)) {
+            const clean = data.filter((f) => !DEMO_FOLLOWUP_IDS.includes(f.id));
+            return clean;
           }
         }
       } catch {
@@ -391,6 +407,31 @@ export const api = {
       }
       return getLocalBackup().followUps;
     }
+  },
+
+  async clearAllLegacyDemoData(): Promise<void> {
+    try {
+      // 1. Delete from Firestore
+      for (const id of DEMO_CUSTOMER_IDS) {
+        await deleteDoc(doc(db, 'customers', id)).catch(() => {});
+      }
+      for (const id of DEMO_LOAN_IDS) {
+        await deleteDoc(doc(db, 'loans', id)).catch(() => {});
+      }
+      for (const id of DEMO_FOLLOWUP_IDS) {
+        await deleteDoc(doc(db, 'followups', id)).catch(() => {});
+      }
+    } catch {
+      // ignore
+    }
+
+    // 2. Clear from local backup
+    const backup = getLocalBackup();
+    saveLocalBackup({
+      customers: backup.customers.filter((c) => !DEMO_CUSTOMER_IDS.includes(c.id)),
+      loans: backup.loans.filter((l) => !DEMO_LOAN_IDS.includes(l.id)),
+      followUps: (backup.followUps || []).filter((f) => !DEMO_FOLLOWUP_IDS.includes(f.id)),
+    });
   },
 
   async createFollowUp(payload: Partial<FollowUpLog>): Promise<FollowUpLog> {

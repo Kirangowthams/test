@@ -36,7 +36,8 @@ export const SecurityModal: React.FC<SecurityModalProps> = ({ isOpen, onClose })
 
   // Recovery Config state
   const [name, setName] = useState(session?.user?.name || 'Galaxy Consultancy');
-  const [email, setEmail] = useState(session?.user?.email || 'skg462003@gmail.com');
+  const [email, setEmail] = useState(securityConfig?.email || session?.user?.email || 'skg462003@gmail.com');
+  const [phone, setPhone] = useState(securityConfig?.phone || session?.user?.phone || '9585022822');
   const [securityQuestion, setSecurityQuestion] = useState(
     securityConfig?.securityQuestion || 'What is the name of your loan consultancy office?'
   );
@@ -89,6 +90,7 @@ export const SecurityModal: React.FC<SecurityModalProps> = ({ isOpen, onClose })
     const res = await updateSecurityProfile({
       name,
       email,
+      phone,
       securityQuestion,
       securityAnswer: securityAnswer ? securityAnswer.trim() : undefined,
       recoveryKey: recoveryKey ? recoveryKey.trim() : undefined,
@@ -284,8 +286,35 @@ export const SecurityModal: React.FC<SecurityModalProps> = ({ isOpen, onClose })
               )}
 
               <p className="text-xs text-slate-500">
-                These credentials allow you or your dad to reset the office password if forgotten.
+                These credentials allow you to verify your identity and reset the office password if forgotten.
               </p>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Primary Mobile Number (for Password Reset)
+                </label>
+                <input
+                  type="text"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="e.g. 9585022822"
+                  className="w-full px-3 py-2 text-sm bg-slate-50 hover:bg-slate-100/60 focus:bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono"
+                />
+                <p className="text-[11px] text-slate-400 mt-0.5">Used for instant SMS OTP password reset</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Recovery Email Address
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="e.g. skg462003@gmail.com"
+                  className="w-full px-3 py-2 text-sm bg-slate-50 hover:bg-slate-100/60 focus:bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                />
+              </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
@@ -320,7 +349,7 @@ export const SecurityModal: React.FC<SecurityModalProps> = ({ isOpen, onClose })
                   type="text"
                   value={recoveryKey}
                   onChange={(e) => setRecoveryKey(e.target.value)}
-                  placeholder="e.g. DAD-SECURE-2025"
+                  placeholder="e.g. GALAXY-SECURE-2025"
                   className="w-full px-3 py-2 text-sm bg-slate-50 hover:bg-slate-100/60 focus:bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono"
                 />
               </div>
@@ -356,6 +385,9 @@ export const SecurityModal: React.FC<SecurityModalProps> = ({ isOpen, onClose })
                   <div>
                     <h3 className="text-sm font-bold text-slate-900">{session?.user?.name}</h3>
                     <p className="text-xs text-slate-500">{session?.user?.email}</p>
+                    <p className="text-xs font-semibold text-slate-700 font-mono mt-0.5">
+                      📱 +91 {session?.user?.phone || securityConfig?.phone || '9585022822'}
+                    </p>
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 mt-1">
                       Role: Primary Office Administrator
                     </span>

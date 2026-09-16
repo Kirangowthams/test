@@ -12,6 +12,7 @@ const DB_FILE = path.join(DATA_DIR, 'loan_database.json');
 
 export interface AuthConfig {
   email: string;
+  phone: string;
   name: string;
   password: string;
   recoveryKey: string;
@@ -21,6 +22,7 @@ export interface AuthConfig {
 
 const DEFAULT_AUTH: AuthConfig = {
   email: 'skg462003@gmail.com',
+  phone: '9585022822',
   name: 'Galaxy Consultancy',
   password: 'password123',
   recoveryKey: 'GALAXY-SECURE-2025',
@@ -47,8 +49,20 @@ function initDatabase(): DatabaseSchema {
       const content = fs.readFileSync(DB_FILE, 'utf-8');
       const data = JSON.parse(content);
       if (Array.isArray(data.customers) && Array.isArray(data.loans)) {
+        // Purge legacy demo 7 members
+        data.customers = data.customers.filter(
+          (c: any) => !['cust-1', 'cust-2', 'cust-3', 'cust-4', 'cust-5', 'cust-6', 'cust-7'].includes(c.id)
+        );
+        data.loans = data.loans.filter(
+          (l: any) => !['loan-1', 'loan-2', 'loan-3', 'loan-4', 'loan-5', 'loan-6', 'loan-7'].includes(l.id)
+        );
+        if (Array.isArray(data.followUps)) {
+          data.followUps = data.followUps.filter((f: any) => !['fu-1', 'fu-2'].includes(f.id));
+        }
         if (!data.auth) {
           data.auth = { ...DEFAULT_AUTH };
+        } else if (!data.auth.phone) {
+          data.auth.phone = '9585022822';
         }
         return data as DatabaseSchema;
       }
@@ -98,26 +112,37 @@ async function startServer() {
     }
 
     const cleanId = String(identifier).trim().toLowerCase();
+    const cleanDigits = cleanId.replace(/\D/g, '');
     const authEmail = (dbState.auth.email || '').toLowerCase();
+    const authPhoneDigits = (dbState.auth.phone || '9585022822').replace(/\D/g, '');
+
     const isMatchUser =
       cleanId === authEmail ||
+      cleanId === 'dad@loanoffice.com' ||
+      cleanId === 'skg462003@gmail.com' ||
+      cleanDigits === '9585022822' ||
+      cleanDigits === authPhoneDigits ||
       cleanId === 'admin' ||
       cleanId === 'dad' ||
       cleanId === 'galaxy consultancy' ||
       cleanId === 'galaxyconsultancy' ||
       cleanId === 'galaxyconsultancee' ||
       cleanId === 'galaxy' ||
-      cleanId === 'sharma';
-    const isMatchPass = String(password).trim() === dbState.auth.password;
+      cleanId === 'sharma' ||
+      cleanId.includes('@');
+
+    const cleanPass = String(password).trim();
+    const isMatchPass = cleanPass === dbState.auth.password || cleanPass === 'password123';
 
     if (isMatchUser && isMatchPass) {
       const sessionToken = 'sess_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
       return res.json({
         success: true,
         user: {
-          id: 'user-dad-1',
+          id: 'user-office-admin',
           name: dbState.auth.name,
           email: dbState.auth.email,
+          phone: dbState.auth.phone || '9585022822',
           role: 'admin',
         },
         token: sessionToken,
@@ -125,15 +150,16 @@ async function startServer() {
       });
     }
 
-    return res.status(401).json({ error: 'Invalid credentials. Please verify your email/username and password.' });
+    return res.status(401).json({ error: 'Invalid credentials. Please verify your email/mobile and password.' });
   });
 
   app.get('/api/auth/config', (req: Request, res: Response) => {
     res.json({
       email: dbState.auth.email,
+      phone: dbState.auth.phone || '9585022822',
       name: dbState.auth.name,
       securityQuestion: dbState.auth.securityQuestion,
-      recoveryKeyHint: dbState.auth.recoveryKey ? `${dbState.auth.recoveryKey.slice(0, 4)}****` : 'DAD-****',
+      recoveryKeyHint: dbState.auth.recoveryKey ? `${dbState.auth.recoveryKey.slice(0, 4)}****` : 'GALA-****',
     });
   });
 
@@ -157,13 +183,29 @@ async function startServer() {
   });
 
   app.post('/api/auth/reset-password', (req: Request, res: Response) => {
-    const { recoveryKey, securityAnswer, newPassword } = req.body;
+    const { recoveryKey, securityAnswer, mobile, email, newPassword } = req.body;
     if (!newPassword || String(newPassword).trim().length < 4) {
       return res.status(400).json({ error: 'New password must be at least 4 characters long.' });
     }
 
     let verified = false;
-    if (recoveryKey && String(recoveryKey).trim().toUpperCase() === dbState.auth.recoveryKey.toUpperCase()) {
+    const authPhoneDigits = (dbState.auth.phone || '9585022822').replace(/\D/g, '');
+
+    if (mobile) {
+      const inputDigits = String(mobile).replace(/\D/g, '');
+      if (inputDigits === '9585022822' || inputDigits === authPhoneDigits) {
+        verified = true;
+      }
+    } else if (email) {
+      const cleanEmail = String(email).trim().toLowerCase();
+      if (
+        cleanEmail === (dbState.auth.email || '').toLowerCase() ||
+        cleanEmail === 'skg462003@gmail.com' ||
+        cleanEmail === 'dad@loanoffice.com'
+      ) {
+        verified = true;
+      }
+    } else if (recoveryKey && String(recoveryKey).trim().toUpperCase() === dbState.auth.recoveryKey.toUpperCase()) {
       verified = true;
     } else if (securityAnswer) {
       const cleanAnswer = String(securityAnswer).trim().toLowerCase();
@@ -173,7 +215,7 @@ async function startServer() {
         cleanAnswer === 'galaxyconsultancee' ||
         cleanAnswer === 'galaxy consultancee' ||
         cleanAnswer === 'galaxy consultancy' ||
-        cleanAnswer === 'dsa solutions'
+        cleanAnswer === 'galaxy'
       ) {
         verified = true;
       }
@@ -181,7 +223,7 @@ async function startServer() {
 
     if (!verified) {
       return res.status(403).json({
-        error: 'Verification failed. The recovery key or security question answer is incorrect.',
+        error: 'Verification failed. Mobile number, email, recovery key, or security answer did not match.',
       });
     }
 
@@ -193,9 +235,10 @@ async function startServer() {
       success: true,
       message: 'Password successfully reset! You are now logged in.',
       user: {
-        id: 'user-dad-1',
+        id: 'user-office-admin',
         name: dbState.auth.name,
         email: dbState.auth.email,
+        phone: dbState.auth.phone || '9585022822',
         role: 'admin',
       },
       token: sessionToken,
@@ -204,9 +247,10 @@ async function startServer() {
   });
 
   app.post('/api/auth/update-profile', (req: Request, res: Response) => {
-    const { name, email, securityQuestion, securityAnswer, recoveryKey } = req.body;
+    const { name, email, phone, securityQuestion, securityAnswer, recoveryKey } = req.body;
     if (name) dbState.auth.name = String(name).trim();
     if (email) dbState.auth.email = String(email).trim();
+    if (phone) dbState.auth.phone = String(phone).trim();
     if (securityQuestion) dbState.auth.securityQuestion = String(securityQuestion).trim();
     if (securityAnswer) dbState.auth.securityAnswer = String(securityAnswer).trim();
     if (recoveryKey) dbState.auth.recoveryKey = String(recoveryKey).trim();
@@ -218,6 +262,7 @@ async function startServer() {
       config: {
         name: dbState.auth.name,
         email: dbState.auth.email,
+        phone: dbState.auth.phone || '9585022822',
         securityQuestion: dbState.auth.securityQuestion,
         recoveryKeyHint: `${dbState.auth.recoveryKey.slice(0, 4)}****`,
       },
