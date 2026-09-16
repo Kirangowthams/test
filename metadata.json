@@ -1,0 +1,6 @@
+{
+  "name": "Galaxy Consultancy",
+  "description": "Galaxy Consultancy loan consultancy management system for tracking customer records, loan disbursements, bank commissions, loan maturity dates, and re-eligibility notifications.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
