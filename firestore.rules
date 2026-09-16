@@ -1,0 +1,74 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidCustomer(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.mobile is string && data.mobile.size() >= 5 && data.mobile.size() <= 25 &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 100)) &&
+             (!('address' in data) || (data.address is string && data.address.size() <= 300)) &&
+             (!('city' in data) || (data.city is string && data.city.size() <= 100)) &&
+             (!('employmentType' in data) || (data.employmentType is string && data.employmentType.size() <= 50)) &&
+             (!('monthlyIncome' in data) || (data.monthlyIncome is number)) &&
+             (!('panOrId' in data) || (data.panOrId is string && data.panOrId.size() <= 30)) &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000));
+    }
+
+    function isValidLoan(data) {
+      return data.customerId is string && data.customerId.size() <= 128 &&
+             data.bankName is string && data.bankName.size() <= 100 &&
+             data.principalAmount is number && data.principalAmount >= 0 &&
+             data.tenureMonths is number && data.tenureMonths > 0 &&
+             (!('customerName' in data) || (data.customerName is string && data.customerName.size() <= 100)) &&
+             (!('customerMobile' in data) || (data.customerMobile is string && data.customerMobile.size() <= 25)) &&
+             (!('loanType' in data) || (data.loanType is string && data.loanType.size() <= 50)) &&
+             (!('accountNumber' in data) || (data.accountNumber is string && data.accountNumber.size() <= 50)) &&
+             (!('interestRate' in data) || (data.interestRate is number)) &&
+             (!('emiAmount' in data) || (data.emiAmount is number)) &&
+             (!('disbursalDate' in data) || (data.disbursalDate is string && data.disbursalDate.size() <= 50)) &&
+             (!('maturityDate' in data) || (data.maturityDate is string && data.maturityDate.size() <= 50)) &&
+             (!('commissionAmount' in data) || (data.commissionAmount is number)) &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000));
+    }
+
+    function isValidFollowUp(data) {
+      return data.customerId is string && data.customerId.size() <= 128 &&
+             data.outcome is string && data.outcome.size() <= 100 &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000)) &&
+             (!('agentName' in data) || (data.agentName is string && data.agentName.size() <= 100));
+    }
+
+    match /customers/{customerId} {
+      allow get, list: if true;
+      allow create: if isValidId(customerId) && isValidCustomer(request.resource.data);
+      allow update: if isValidId(customerId) && isValidCustomer(request.resource.data);
+      allow delete: if isValidId(customerId);
+    }
+
+    match /loans/{loanId} {
+      allow get, list: if true;
+      allow create: if isValidId(loanId) && isValidLoan(request.resource.data);
+      allow update: if isValidId(loanId) && isValidLoan(request.resource.data);
+      allow delete: if isValidId(loanId);
+    }
+
+    match /followups/{followUpId} {
+      allow get, list: if true;
+      allow create: if isValidId(followUpId) && isValidFollowUp(request.resource.data);
+      allow update: if isValidId(followUpId) && isValidFollowUp(request.resource.data);
+      allow delete: if isValidId(followUpId);
+    }
+
+    match /test/{docId} {
+      allow read: if true;
+    }
+  }
+}

@@ -1,3 +1,12 @@
+import {
+  collection,
+  doc,
+  getDocs,
+  setDoc,
+  deleteDoc,
+  writeBatch,
+} from 'firebase/firestore';
+import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { Customer, Loan, FollowUpLog } from '../types';
 import { getInitialSeedData } from '../data/initialData';
 
@@ -26,6 +35,16 @@ function saveLocalBackup(data: { customers: Customer[]; loans: Loan[]; followUps
   }
 }
 
+function sanitizeForFirestore<T extends Record<string, any>>(obj: T): T {
+  const clean: Record<string, any> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      clean[key] = value;
+    }
+  }
+  return clean as T;
+}
+
 async function safeFetchJson<T = any>(res: Response): Promise<T | null> {
   const contentType = res.headers.get('content-type') || '';
   if (!contentType.includes('application/json')) {
@@ -41,138 +60,199 @@ async function safeFetchJson<T = any>(res: Response): Promise<T | null> {
 }
 
 export const api = {
+  // ===================== CUSTOMERS =====================
   async getCustomers(): Promise<Customer[]> {
     try {
-      const res = await fetch('/api/customers');
-      if (res.ok) {
-        const data = await safeFetchJson<Customer[]>(res);
-        if (Array.isArray(data)) {
-          const current = getLocalBackup();
-          saveLocalBackup({ ...current, customers: data });
-          return data;
-        }
+      const snap = await getDocs(collection(db, 'customers'));
+      if (!snap.empty) {
+        const list: Customer[] = [];
+        snap.forEach((d) => list.push(d.data() as Customer));
+        list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+        const current = getLocalBackup();
+        saveLocalBackup({ ...current, customers: list });
+        return list;
+      } else {
+        // Initial seed into Firestore so cloud database starts populated
+        const seed = getInitialSeedData();
+        const batch = writeBatch(db);
+        seed.customers.forEach((c) => {
+          batch.set(doc(db, 'customers', c.id), sanitizeForFirestore(c));
+        });
+        await batch.commit();
+        const current = getLocalBackup();
+        saveLocalBackup({ ...current, customers: seed.customers });
+        return seed.customers;
       }
-    } catch (e) {
-      console.warn('Backend fetch failed, using local cache:', e);
+    } catch (err) {
+      console.warn('Firestore getCustomers failed, attempting fallback:', err);
+      try {
+        const res = await fetch('/api/customers');
+        if (res.ok) {
+          const data = await safeFetchJson<Customer[]>(res);
+          if (Array.isArray(data) && data.length > 0) {
+            return data;
+          }
+        }
+      } catch {
+        // network or server fallback failed
+      }
+      return getLocalBackup().customers;
     }
-    return getLocalBackup().customers;
   },
 
   async createCustomer(payload: Partial<Customer>): Promise<Customer> {
-    try {
-      const res = await fetch('/api/customers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (res.ok) {
-        const data = await safeFetchJson<Customer>(res);
-        if (data && data.id) {
-          return data;
-        }
-      }
-    } catch (e) {
-      console.warn('Backend post failed, creating locally:', e);
-    }
-
-    const local = getLocalBackup();
     const newCust: Customer = {
-      id: `cust-${Date.now()}`,
-      name: payload.name || 'New Customer',
-      mobile: payload.mobile || '',
-      alternatePhone: payload.alternatePhone || '',
-      email: payload.email || '',
-      address: payload.address || '',
-      city: payload.city || '',
+      id: payload.id || `cust-${Date.now()}`,
+      name: (payload.name || 'New Customer').trim(),
+      mobile: (payload.mobile || '').trim(),
+      alternatePhone: (payload.alternatePhone || '').trim(),
+      email: (payload.email || '').trim(),
+      address: (payload.address || '').trim(),
+      city: (payload.city || '').trim(),
       employmentType: payload.employmentType || 'Salaried',
-      monthlyIncome: payload.monthlyIncome || 0,
-      panOrId: payload.panOrId || '',
-      notes: payload.notes || '',
-      createdAt: new Date().toISOString().split('T')[0],
+      monthlyIncome: Number(payload.monthlyIncome) || 0,
+      panOrId: (payload.panOrId || '').trim().toUpperCase(),
+      notes: (payload.notes || '').trim(),
+      createdAt: payload.createdAt || new Date().toISOString().split('T')[0],
       updatedAt: new Date().toISOString().split('T')[0],
     };
-    local.customers.unshift(newCust);
+
+    // 1. Save directly into Firestore database
+    try {
+      await setDoc(doc(db, 'customers', newCust.id), sanitizeForFirestore(newCust));
+    } catch (err) {
+      console.error('Error saving customer to Firestore:', err);
+      handleFirestoreError(err, OperationType.CREATE, `customers/${newCust.id}`);
+    }
+
+    // 2. Keep local cache synchronized
+    const local = getLocalBackup();
+    local.customers = [newCust, ...local.customers.filter((c) => c.id !== newCust.id)];
     saveLocalBackup(local);
+
+    // 3. Inform backend API in background if running
+    try {
+      fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newCust),
+      }).catch(() => {});
+    } catch {
+      // ignore
+    }
+
     return newCust;
   },
 
   async updateCustomer(id: string, payload: Partial<Customer>): Promise<Customer> {
+    const local = getLocalBackup();
+    const existing = local.customers.find((c) => c.id === id);
+    const updated: Customer = {
+      ...(existing || {}),
+      ...payload,
+      id,
+      updatedAt: new Date().toISOString().split('T')[0],
+    } as Customer;
+
+    // 1. Update in Firestore database
     try {
-      const res = await fetch(`/api/customers/${id}`, {
+      await setDoc(doc(db, 'customers', id), sanitizeForFirestore(updated), { merge: true });
+    } catch (err) {
+      console.error('Error updating customer in Firestore:', err);
+      handleFirestoreError(err, OperationType.UPDATE, `customers/${id}`);
+    }
+
+    // 2. Update local state
+    const idx = local.customers.findIndex((c) => c.id === id);
+    if (idx !== -1) {
+      local.customers[idx] = updated;
+    } else {
+      local.customers.unshift(updated);
+    }
+    saveLocalBackup(local);
+
+    // 3. Inform backend in background
+    try {
+      fetch(`/api/customers/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-      });
-      if (res.ok) {
-        const data = await safeFetchJson<Customer>(res);
-        if (data && data.id) {
-          return data;
-        }
-      }
-    } catch (e) {
-      console.warn('Backend put failed, updating locally:', e);
+      }).catch(() => {});
+    } catch {
+      // ignore
     }
 
-    const local = getLocalBackup();
-    const idx = local.customers.findIndex((c) => c.id === id);
-    if (idx !== -1) {
-      local.customers[idx] = { ...local.customers[idx], ...payload, updatedAt: new Date().toISOString().split('T')[0] };
-      saveLocalBackup(local);
-      return local.customers[idx];
-    }
-    throw new Error('Customer not found');
+    return updated;
   },
 
   async deleteCustomer(id: string): Promise<void> {
+    // 1. Delete customer from Firestore
     try {
-      await fetch(`/api/customers/${id}`, { method: 'DELETE' });
-    } catch (e) {
-      console.warn('Backend delete failed:', e);
+      await deleteDoc(doc(db, 'customers', id));
+    } catch (err) {
+      console.error('Error deleting customer from Firestore:', err);
+      handleFirestoreError(err, OperationType.DELETE, `customers/${id}`);
     }
+
+    // 2. Local state cleanup
     const local = getLocalBackup();
     local.customers = local.customers.filter((c) => c.id !== id);
     local.loans = local.loans.filter((l) => l.customerId !== id);
+    local.followUps = local.followUps.filter((f) => f.customerId !== id);
     saveLocalBackup(local);
+
+    // 3. Inform backend
+    try {
+      fetch(`/api/customers/${id}`, { method: 'DELETE' }).catch(() => {});
+    } catch {
+      // ignore
+    }
   },
 
+  // ===================== LOANS =====================
   async getLoans(): Promise<Loan[]> {
     try {
-      const res = await fetch('/api/loans');
-      if (res.ok) {
-        const data = await safeFetchJson<Loan[]>(res);
-        if (Array.isArray(data)) {
-          const current = getLocalBackup();
-          saveLocalBackup({ ...current, loans: data });
-          return data;
-        }
+      const snap = await getDocs(collection(db, 'loans'));
+      if (!snap.empty) {
+        const list: Loan[] = [];
+        snap.forEach((d) => list.push(d.data() as Loan));
+        list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+        const current = getLocalBackup();
+        saveLocalBackup({ ...current, loans: list });
+        return list;
+      } else {
+        const seed = getInitialSeedData();
+        const batch = writeBatch(db);
+        seed.loans.forEach((l) => {
+          batch.set(doc(db, 'loans', l.id), sanitizeForFirestore(l));
+        });
+        await batch.commit();
+        const current = getLocalBackup();
+        saveLocalBackup({ ...current, loans: seed.loans });
+        return seed.loans;
       }
-    } catch (e) {
-      console.warn('Backend fetch failed, using local cache:', e);
+    } catch (err) {
+      console.warn('Firestore getLoans failed, using fallback:', err);
+      try {
+        const res = await fetch('/api/loans');
+        if (res.ok) {
+          const data = await safeFetchJson<Loan[]>(res);
+          if (Array.isArray(data) && data.length > 0) {
+            return data;
+          }
+        }
+      } catch {
+        // ignore
+      }
+      return getLocalBackup().loans;
     }
-    return getLocalBackup().loans;
   },
 
   async createLoan(payload: Partial<Loan>): Promise<Loan> {
-    try {
-      const res = await fetch('/api/loans', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (res.ok) {
-        const data = await safeFetchJson<Loan>(res);
-        if (data && data.id) {
-          return data;
-        }
-      }
-    } catch (e) {
-      console.warn('Backend post loan failed, fallback local:', e);
-    }
-
     const local = getLocalBackup();
     const customer = local.customers.find((c) => c.id === payload.customerId);
     const newLoan: Loan = {
-      id: `loan-${Date.now()}`,
+      id: payload.id || `loan-${Date.now()}`,
       customerId: payload.customerId || '',
       customerName: customer ? customer.name : payload.customerName || '',
       customerMobile: customer ? customer.mobile : payload.customerMobile || '',
@@ -190,90 +270,134 @@ export const api = {
       commissionStatus: payload.commissionStatus || 'Pending',
       status: payload.status || 'Active',
       notes: payload.notes || '',
-      createdAt: new Date().toISOString().split('T')[0],
+      createdAt: payload.createdAt || new Date().toISOString().split('T')[0],
       updatedAt: new Date().toISOString().split('T')[0],
     };
-    local.loans.unshift(newLoan);
+
+    try {
+      await setDoc(doc(db, 'loans', newLoan.id), sanitizeForFirestore(newLoan));
+    } catch (err) {
+      console.error('Error saving loan to Firestore:', err);
+      handleFirestoreError(err, OperationType.CREATE, `loans/${newLoan.id}`);
+    }
+
+    local.loans = [newLoan, ...local.loans.filter((l) => l.id !== newLoan.id)];
     saveLocalBackup(local);
+
+    try {
+      fetch('/api/loans', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newLoan),
+      }).catch(() => {});
+    } catch {
+      // ignore
+    }
+
     return newLoan;
   },
 
   async updateLoan(id: string, payload: Partial<Loan>): Promise<Loan> {
+    const local = getLocalBackup();
+    const existing = local.loans.find((l) => l.id === id);
+    const updated: Loan = {
+      ...(existing || {}),
+      ...payload,
+      id,
+      updatedAt: new Date().toISOString().split('T')[0],
+    } as Loan;
+
     try {
-      const res = await fetch(`/api/loans/${id}`, {
+      await setDoc(doc(db, 'loans', id), sanitizeForFirestore(updated), { merge: true });
+    } catch (err) {
+      console.error('Error updating loan in Firestore:', err);
+      handleFirestoreError(err, OperationType.UPDATE, `loans/${id}`);
+    }
+
+    const idx = local.loans.findIndex((l) => l.id === id);
+    if (idx !== -1) {
+      local.loans[idx] = updated;
+    } else {
+      local.loans.unshift(updated);
+    }
+    saveLocalBackup(local);
+
+    try {
+      fetch(`/api/loans/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-      });
-      if (res.ok) {
-        const data = await safeFetchJson<Loan>(res);
-        if (data && data.id) {
-          return data;
-        }
-      }
-    } catch (e) {
-      console.warn('Backend put loan failed:', e);
+      }).catch(() => {});
+    } catch {
+      // ignore
     }
 
-    const local = getLocalBackup();
-    const idx = local.loans.findIndex((l) => l.id === id);
-    if (idx !== -1) {
-      local.loans[idx] = { ...local.loans[idx], ...payload, updatedAt: new Date().toISOString().split('T')[0] };
-      saveLocalBackup(local);
-      return local.loans[idx];
-    }
-    throw new Error('Loan not found');
+    return updated;
   },
 
   async deleteLoan(id: string): Promise<void> {
     try {
-      await fetch(`/api/loans/${id}`, { method: 'DELETE' });
-    } catch (e) {
-      console.warn('Backend delete loan failed:', e);
+      await deleteDoc(doc(db, 'loans', id));
+    } catch (err) {
+      console.error('Error deleting loan in Firestore:', err);
+      handleFirestoreError(err, OperationType.DELETE, `loans/${id}`);
     }
+
     const local = getLocalBackup();
     local.loans = local.loans.filter((l) => l.id !== id);
     saveLocalBackup(local);
+
+    try {
+      fetch(`/api/loans/${id}`, { method: 'DELETE' }).catch(() => {});
+    } catch {
+      // ignore
+    }
   },
 
+  // ===================== FOLLOW-UPS =====================
   async getFollowUps(): Promise<FollowUpLog[]> {
     try {
-      const res = await fetch('/api/followups');
-      if (res.ok) {
-        const data = await safeFetchJson<FollowUpLog[]>(res);
-        if (Array.isArray(data)) {
-          const current = getLocalBackup();
-          saveLocalBackup({ ...current, followUps: data });
-          return data;
-        }
+      const snap = await getDocs(collection(db, 'followups'));
+      if (!snap.empty) {
+        const list: FollowUpLog[] = [];
+        snap.forEach((d) => list.push(d.data() as FollowUpLog));
+        list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+        const current = getLocalBackup();
+        saveLocalBackup({ ...current, followUps: list });
+        return list;
+      } else {
+        const seed = getInitialSeedData();
+        const batch = writeBatch(db);
+        seed.followUps.forEach((f) => {
+          batch.set(doc(db, 'followups', f.id), sanitizeForFirestore(f));
+        });
+        await batch.commit();
+        const current = getLocalBackup();
+        saveLocalBackup({ ...current, followUps: seed.followUps });
+        return seed.followUps;
       }
-    } catch (e) {
-      console.warn('Backend fetch followups failed:', e);
+    } catch (err) {
+      console.warn('Firestore getFollowUps failed:', err);
+      try {
+        const res = await fetch('/api/followups');
+        if (res.ok) {
+          const data = await safeFetchJson<FollowUpLog[]>(res);
+          if (Array.isArray(data) && data.length > 0) {
+            return data;
+          }
+        }
+      } catch {
+        // ignore
+      }
+      return getLocalBackup().followUps;
     }
-    return getLocalBackup().followUps;
   },
 
   async createFollowUp(payload: Partial<FollowUpLog>): Promise<FollowUpLog> {
-    try {
-      const res = await fetch('/api/followups', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (res.ok) {
-        const data = await safeFetchJson<FollowUpLog>(res);
-        if (data && data.id) {
-          return data;
-        }
-      }
-    } catch (e) {
-      console.warn('Backend create followup failed:', e);
-    }
-
     const local = getLocalBackup();
     const customer = local.customers.find((c) => c.id === payload.customerId);
     const newFu: FollowUpLog = {
-      id: `fu-${Date.now()}`,
+      id: payload.id || `fu-${Date.now()}`,
       customerId: payload.customerId || '',
       customerName: customer ? customer.name : payload.customerName || 'Customer',
       loanId: payload.loanId || '',
@@ -284,31 +408,79 @@ export const api = {
       agentName: payload.agentName || "Dad's Desk",
       createdAt: new Date().toISOString().split('T')[0],
     };
+
+    try {
+      await setDoc(doc(db, 'followups', newFu.id), sanitizeForFirestore(newFu));
+    } catch (err) {
+      console.error('Error creating followup in Firestore:', err);
+      handleFirestoreError(err, OperationType.CREATE, `followups/${newFu.id}`);
+    }
+
     local.followUps.unshift(newFu);
     saveLocalBackup(local);
+
+    try {
+      fetch('/api/followups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newFu),
+      }).catch(() => {});
+    } catch {
+      // ignore
+    }
+
     return newFu;
   },
 
+  // ===================== RESET & IMPORT =====================
   async resetSeedData(): Promise<void> {
+    const seed = getInitialSeedData();
+    try {
+      const batch = writeBatch(db);
+      seed.customers.forEach((c) => batch.set(doc(db, 'customers', c.id), sanitizeForFirestore(c)));
+      seed.loans.forEach((l) => batch.set(doc(db, 'loans', l.id), sanitizeForFirestore(l)));
+      seed.followUps.forEach((f) => batch.set(doc(db, 'followups', f.id), sanitizeForFirestore(f)));
+      await batch.commit();
+    } catch (err) {
+      console.warn('Firestore resetSeedData sync failed:', err);
+    }
+    saveLocalBackup(seed);
     try {
       await fetch('/api/reset-seed', { method: 'POST' });
-    } catch (e) {
-      console.warn('Backend reset failed, using local reset:', e);
+    } catch {
+      // ignore
     }
-    const seed = getInitialSeedData();
-    saveLocalBackup(seed);
   },
 
-  async importData(data: { customers: Customer[]; loans: Loan[]; followUps: FollowUpLog[] }): Promise<void> {
+  async importData(data: {
+    customers: Customer[];
+    loans: Loan[];
+    followUps: FollowUpLog[];
+  }): Promise<void> {
+    try {
+      const batch = writeBatch(db);
+      (data.customers || []).forEach((c) =>
+        batch.set(doc(db, 'customers', c.id), sanitizeForFirestore(c))
+      );
+      (data.loans || []).forEach((l) =>
+        batch.set(doc(db, 'loans', l.id), sanitizeForFirestore(l))
+      );
+      (data.followUps || []).forEach((f) =>
+        batch.set(doc(db, 'followups', f.id), sanitizeForFirestore(f))
+      );
+      await batch.commit();
+    } catch (err) {
+      console.warn('Firestore batch importData failed:', err);
+    }
+    saveLocalBackup(data);
     try {
       await fetch('/api/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-    } catch (e) {
-      console.warn('Backend import failed, importing locally:', e);
+    } catch {
+      // ignore
     }
-    saveLocalBackup(data);
   },
 };
