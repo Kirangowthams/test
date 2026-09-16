@@ -26,15 +26,31 @@ function saveLocalBackup(data: { customers: Customer[]; loans: Loan[]; followUps
   }
 }
 
+async function safeFetchJson<T = any>(res: Response): Promise<T | null> {
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    return null;
+  }
+  try {
+    const text = await res.text();
+    if (!text || text.trim() === '') return null;
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
+  }
+}
+
 export const api = {
   async getCustomers(): Promise<Customer[]> {
     try {
       const res = await fetch('/api/customers');
       if (res.ok) {
-        const data = await res.json();
-        const current = getLocalBackup();
-        saveLocalBackup({ ...current, customers: data });
-        return data;
+        const data = await safeFetchJson<Customer[]>(res);
+        if (Array.isArray(data)) {
+          const current = getLocalBackup();
+          saveLocalBackup({ ...current, customers: data });
+          return data;
+        }
       }
     } catch (e) {
       console.warn('Backend fetch failed, using local cache:', e);
@@ -50,7 +66,10 @@ export const api = {
         body: JSON.stringify(payload),
       });
       if (res.ok) {
-        return await res.json();
+        const data = await safeFetchJson<Customer>(res);
+        if (data && data.id) {
+          return data;
+        }
       }
     } catch (e) {
       console.warn('Backend post failed, creating locally:', e);
@@ -85,7 +104,10 @@ export const api = {
         body: JSON.stringify(payload),
       });
       if (res.ok) {
-        return await res.json();
+        const data = await safeFetchJson<Customer>(res);
+        if (data && data.id) {
+          return data;
+        }
       }
     } catch (e) {
       console.warn('Backend put failed, updating locally:', e);
@@ -117,10 +139,12 @@ export const api = {
     try {
       const res = await fetch('/api/loans');
       if (res.ok) {
-        const data = await res.json();
-        const current = getLocalBackup();
-        saveLocalBackup({ ...current, loans: data });
-        return data;
+        const data = await safeFetchJson<Loan[]>(res);
+        if (Array.isArray(data)) {
+          const current = getLocalBackup();
+          saveLocalBackup({ ...current, loans: data });
+          return data;
+        }
       }
     } catch (e) {
       console.warn('Backend fetch failed, using local cache:', e);
@@ -136,7 +160,10 @@ export const api = {
         body: JSON.stringify(payload),
       });
       if (res.ok) {
-        return await res.json();
+        const data = await safeFetchJson<Loan>(res);
+        if (data && data.id) {
+          return data;
+        }
       }
     } catch (e) {
       console.warn('Backend post loan failed, fallback local:', e);
@@ -179,7 +206,10 @@ export const api = {
         body: JSON.stringify(payload),
       });
       if (res.ok) {
-        return await res.json();
+        const data = await safeFetchJson<Loan>(res);
+        if (data && data.id) {
+          return data;
+        }
       }
     } catch (e) {
       console.warn('Backend put loan failed:', e);
@@ -210,10 +240,12 @@ export const api = {
     try {
       const res = await fetch('/api/followups');
       if (res.ok) {
-        const data = await res.json();
-        const current = getLocalBackup();
-        saveLocalBackup({ ...current, followUps: data });
-        return data;
+        const data = await safeFetchJson<FollowUpLog[]>(res);
+        if (Array.isArray(data)) {
+          const current = getLocalBackup();
+          saveLocalBackup({ ...current, followUps: data });
+          return data;
+        }
       }
     } catch (e) {
       console.warn('Backend fetch followups failed:', e);
@@ -229,7 +261,10 @@ export const api = {
         body: JSON.stringify(payload),
       });
       if (res.ok) {
-        return await res.json();
+        const data = await safeFetchJson<FollowUpLog>(res);
+        if (data && data.id) {
+          return data;
+        }
       }
     } catch (e) {
       console.warn('Backend create followup failed:', e);
