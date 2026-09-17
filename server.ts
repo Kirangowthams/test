@@ -132,7 +132,7 @@ async function startServer() {
       cleanId.includes('@');
 
     const cleanPass = String(password).trim();
-    const isMatchPass = cleanPass === dbState.auth.password || cleanPass === 'password123';
+    const isMatchPass = cleanPass === dbState.auth.password;
 
     if (isMatchUser && isMatchPass) {
       const sessionToken = 'sess_' + Math.random().toString(36).substring(2) + Date.now().toString(36);

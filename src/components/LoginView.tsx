@@ -35,8 +35,8 @@ export const LoginView: React.FC = () => {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // Reset form state
-  const [resetMobile, setResetMobile] = useState(securityConfig?.phone || '9585022822');
-  const [resetEmail, setResetEmail] = useState(securityConfig?.email || 'skg462003@gmail.com');
+  const [resetMobile, setResetMobile] = useState('');
+  const [resetEmail, setResetEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [otpNotice, setOtpNotice] = useState<string | null>(null);
   const [recoveryKey, setRecoveryKey] = useState('');
@@ -50,22 +50,33 @@ export const LoginView: React.FC = () => {
 
   const handleSendMobileOtp = () => {
     const cleanDigits = resetMobile.replace(/\D/g, '');
-    if (!cleanDigits) {
-      setResetError('Please enter a valid mobile number.');
+    if (!cleanDigits || cleanDigits.length < 10) {
+      setResetError('Please enter your valid 10-digit registered mobile number.');
+      return;
+    }
+    const registeredPhoneDigits = (securityConfig?.phone || '9585022822').replace(/\D/g, '');
+    if (cleanDigits !== registeredPhoneDigits && cleanDigits !== '9585022822') {
+      setResetError('This mobile number is not registered with this office portal.');
       return;
     }
     setResetError(null);
-    setOtpNotice(`✅ OTP sent to +91 ${cleanDigits}: Use verification code 958502`);
+    setOtpNotice('✅ SMS OTP verification code sent. For instant verification, enter code: 958502');
     setOtpCode('958502');
   };
 
   const handleSendEmailCode = () => {
-    if (!resetEmail.trim()) {
-      setResetError('Please enter your registered email ID.');
+    const cleanEmail = resetEmail.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      setResetError('Please enter your registered email address.');
+      return;
+    }
+    const registeredEmail = (securityConfig?.email || 'skg462003@gmail.com').toLowerCase().trim();
+    if (cleanEmail !== registeredEmail && cleanEmail !== 'skg462003@gmail.com') {
+      setResetError('This email address is not registered with this office portal.');
       return;
     }
     setResetError(null);
-    setOtpNotice(`✅ Reset verification code sent to ${resetEmail.trim()}: 958502`);
+    setOtpNotice('✅ Verification code sent to email. For instant verification, enter code: 958502');
     setOtpCode('958502');
   };
 
@@ -97,24 +108,34 @@ export const LoginView: React.FC = () => {
 
     if (resetMethod === 'mobile') {
       const cleanDigits = resetMobile.replace(/\D/g, '');
-      if (!cleanDigits) {
-        setResetError('Please enter your mobile number.');
+      if (!cleanDigits || cleanDigits.length < 10) {
+        setResetError('Please enter your 10-digit registered mobile number.');
         return;
       }
-      if (cleanDigits !== '9585022822' && cleanDigits !== (securityConfig?.phone || '').replace(/\D/g, '')) {
-        setResetError('Entered mobile number does not match registered primary mobile (9585022822).');
+      const registeredPhoneDigits = (securityConfig?.phone || '9585022822').replace(/\D/g, '');
+      if (cleanDigits !== '9585022822' && cleanDigits !== registeredPhoneDigits) {
+        setResetError('Entered mobile number is not registered for this office portal.');
+        return;
+      }
+      if (!otpCode.trim()) {
+        setResetError('Please enter the 6-digit SMS OTP (or click "Send OTP").');
         return;
       }
     }
 
     if (resetMethod === 'email') {
       const cleanEmail = resetEmail.trim().toLowerCase();
-      if (!cleanEmail) {
+      if (!cleanEmail || !cleanEmail.includes('@')) {
         setResetError('Please enter your registered email address.');
         return;
       }
-      if (cleanEmail !== 'skg462003@gmail.com' && cleanEmail !== (securityConfig?.email || '').toLowerCase()) {
-        setResetError('Entered email does not match registered email (skg462003@gmail.com).');
+      const registeredEmail = (securityConfig?.email || 'skg462003@gmail.com').toLowerCase().trim();
+      if (cleanEmail !== 'skg462003@gmail.com' && cleanEmail !== registeredEmail) {
+        setResetError('Entered email is not registered for this office portal.');
+        return;
+      }
+      if (!otpCode.trim()) {
+        setResetError('Please enter the 6-digit verification code sent to your email.');
         return;
       }
     }
@@ -149,7 +170,7 @@ export const LoginView: React.FC = () => {
     if (!result.success) {
       setResetError(result.error || 'Failed to reset password. Please check your verification information.');
     } else {
-      setResetSuccess(result.message || 'Password successfully updated! You are now authenticated.');
+      setResetSuccess(result.message || 'Password successfully updated! Unlocking your office portal...');
     }
   };
 
@@ -228,13 +249,10 @@ export const LoginView: React.FC = () => {
                     type="text"
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
-                    placeholder="e.g. 9585022822 or skg462003@gmail.com"
+                    placeholder="Enter your mobile, email or username"
                     className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 hover:bg-slate-100/60 dark:hover:bg-slate-750 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
                   />
                 </div>
-                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
-                  Authorized Mobile: <span className="font-mono font-bold text-slate-600 dark:text-slate-300">9585022822</span>
-                </p>
               </div>
 
               {/* Password */}
@@ -316,7 +334,7 @@ export const LoginView: React.FC = () => {
               </div>
 
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Verify via registered mobile number (9585022822), email, recovery key, or security question.
+                Verify via your registered mobile number, email, recovery key, or security question.
               </p>
 
               {otpNotice && (
@@ -417,7 +435,7 @@ export const LoginView: React.FC = () => {
                         type="tel"
                         value={resetMobile}
                         onChange={(e) => setResetMobile(e.target.value)}
-                        placeholder="e.g. 9585022822"
+                        placeholder="Enter 10-digit mobile number"
                         className="flex-1 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 hover:bg-slate-100/60 dark:hover:bg-slate-750 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono"
                       />
                       <button
@@ -429,9 +447,6 @@ export const LoginView: React.FC = () => {
                         <span>Send OTP</span>
                       </button>
                     </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-                      Authorized office number: <span className="font-mono font-bold text-slate-700 dark:text-slate-300">9585022822</span>
-                    </p>
                   </div>
 
                   <div>
@@ -443,7 +458,7 @@ export const LoginView: React.FC = () => {
                       type="text"
                       value={otpCode}
                       onChange={(e) => setOtpCode(e.target.value)}
-                      placeholder="Enter 6-digit OTP (e.g. 958502)"
+                      placeholder="Enter 6-digit OTP"
                       className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 hover:bg-slate-100/60 dark:hover:bg-slate-750 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono"
                     />
                   </div>
@@ -463,7 +478,7 @@ export const LoginView: React.FC = () => {
                         type="email"
                         value={resetEmail}
                         onChange={(e) => setResetEmail(e.target.value)}
-                        placeholder="e.g. skg462003@gmail.com"
+                        placeholder="Enter registered email address"
                         className="flex-1 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 hover:bg-slate-100/60 dark:hover:bg-slate-750 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                       />
                       <button
@@ -475,9 +490,6 @@ export const LoginView: React.FC = () => {
                         <span>Send Code</span>
                       </button>
                     </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-                      Registered account: <span className="font-semibold text-slate-700 dark:text-slate-300">skg462003@gmail.com</span>
-                    </p>
                   </div>
 
                   <div>
@@ -488,7 +500,7 @@ export const LoginView: React.FC = () => {
                       type="text"
                       value={otpCode}
                       onChange={(e) => setOtpCode(e.target.value)}
-                      placeholder="Enter verification code (e.g. 958502)"
+                      placeholder="Enter verification code"
                       className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 hover:bg-slate-100/60 dark:hover:bg-slate-750 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono"
                     />
                   </div>
@@ -503,15 +515,12 @@ export const LoginView: React.FC = () => {
                   </label>
                   <input
                     id="recovery-key-input"
-                    type="text"
+                    type="password"
                     value={recoveryKey}
                     onChange={(e) => setRecoveryKey(e.target.value)}
                     placeholder="Enter your recovery key"
                     className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 hover:bg-slate-100/60 dark:hover:bg-slate-750 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono"
                   />
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    Office recovery key: <span className="font-mono font-bold">GALAXY-SECURE-2025</span>
-                  </p>
                 </div>
               )}
 
@@ -535,7 +544,7 @@ export const LoginView: React.FC = () => {
                     type="text"
                     value={securityAnswer}
                     onChange={(e) => setSecurityAnswer(e.target.value)}
-                    placeholder="e.g. Galaxy Consultancy"
+                    placeholder="Enter your security answer"
                     className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 hover:bg-slate-100/60 dark:hover:bg-slate-750 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                   />
                 </div>

@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { AuthSession, SecurityConfig, UserAccount } from '../types';
 
 interface AuthContextType {
@@ -77,6 +79,22 @@ function saveStoredCredentials(creds: LocalCredentials) {
   }
 }
 
+async function syncCredentialsToFirestore(creds: LocalCredentials) {
+  try {
+    const docRef = doc(db, 'settings', 'auth');
+    await setDoc(
+      docRef,
+      {
+        ...creds,
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+  } catch (e) {
+    console.warn('Could not sync credentials to Firestore:', e);
+  }
+}
+
 async function safeFetchJson<T = any>(res: Response): Promise<T | null> {
   const contentType = res.headers.get('content-type') || '';
   if (!contentType.includes('application/json')) {
@@ -104,7 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   });
 
-  // Load existing session on initial render if previously logged in
+  // Load existing session and sync cloud credentials on initial render
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -119,6 +137,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
+
+    // Pull latest credentials from Firestore so all devices stay updated
+    const loadCloudCredentials = async () => {
+      try {
+        const snap = await getDoc(doc(db, 'settings', 'auth'));
+        if (snap.exists()) {
+          const cloudData = snap.data() as Partial<LocalCredentials>;
+          if (cloudData && typeof cloudData.password === 'string') {
+            const merged = { ...getStoredCredentials(), ...cloudData };
+            saveStoredCredentials(merged);
+            setSecurityConfig({
+              email: merged.email,
+              phone: merged.phone,
+              name: merged.name,
+              securityQuestion: merged.securityQuestion,
+              recoveryKeyHint: `${merged.recoveryKey.slice(0, 4)}****`,
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('Could not load credentials from Firestore:', err);
+      }
+    };
+
+    loadCloudCredentials();
   }, []);
 
   // Fetch public security config (for reset password hints)
@@ -217,10 +260,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       cleanId.includes('admin') ||
       cleanId.includes('@');
 
-    // Password matches stored password OR default password123
-    const isMatchPass =
-      cleanPass === creds.password ||
-      cleanPass === 'password123';
+    // Password matches stored password strictly
+    const isMatchPass = cleanPass === creds.password;
 
     if (isMatchUser && isMatchPass) {
       const localToken = 'sess_local_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
@@ -244,7 +285,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!isMatchPass) {
       return {
         success: false,
-        error: 'Incorrect password. Please verify your password or use "Forgot / Reset?".',
+        error: 'Incorrect password. Please enter the valid password or use "Forgot / Reset?".',
       };
     }
 
@@ -282,8 +323,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!res.ok) {
           return { success: false, error: data.error || 'Failed to change password.' };
         }
-        // Also update local copy
-        saveStoredCredentials({ ...creds, password: String(payload.newPassword).trim() });
+        // Also update local copy and Firestore
+        const updatedCreds = { ...creds, password: String(payload.newPassword).trim() };
+        saveStoredCredentials(updatedCreds);
+        syncCredentialsToFirestore(updatedCreds);
         return { success: true, message: data.message || 'Password updated successfully.' };
       }
     } catch {
@@ -295,7 +338,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: false, error: 'Current password is incorrect.' };
     }
 
-    saveStoredCredentials({ ...creds, password: String(payload.newPassword).trim() });
+    const updatedCreds = { ...creds, password: String(payload.newPassword).trim() };
+    saveStoredCredentials(updatedCreds);
+    syncCredentialsToFirestore(updatedCreds);
     return { success: true, message: 'Password has been updated successfully.' };
   };
 
@@ -387,6 +432,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const updatedCreds = { ...creds, password: String(payload.newPassword).trim() };
     saveStoredCredentials(updatedCreds);
+    syncCredentialsToFirestore(updatedCreds);
 
     const localToken = 'sess_local_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
     const newSession: AuthSession = {
@@ -449,6 +495,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     saveStoredCredentials(updatedCreds);
+    syncCredentialsToFirestore(updatedCreds);
     setSecurityConfig({
       email: updatedCreds.email,
       name: updatedCreds.name,
