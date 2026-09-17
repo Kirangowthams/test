@@ -136,9 +136,10 @@ export const ReEligibilityRadar: React.FC<ReEligibilityRadarProps> = ({
               id="export-calling-list-btn"
               onClick={() => exportReEligibilityReportCSV(loans)}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-xl transition-colors cursor-pointer"
+              title="Download Excel calling list containing Name, Number, and Loan Type"
             >
               <Download className="w-4 h-4" />
-              <span>Export Calling List (.csv)</span>
+              <span>Export Calling List (Name, Number, Loan Type)</span>
             </button>
           </div>
         </div>

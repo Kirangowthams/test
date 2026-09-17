@@ -247,9 +247,10 @@ export const CustomerLoanDirectory: React.FC<CustomerLoanDirectoryProps> = ({
             id="export-loans-csv-btn"
             onClick={() => exportLoansToCSV(loans, customers)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors cursor-pointer"
+            title="Download clean Excel calling list containing Name, Mobile Number, and Loan Type"
           >
             <Download className="w-3.5 h-3.5 text-slate-500" />
-            <span>Export to Excel / CSV</span>
+            <span>Export to Excel (Name, Number, Loan Type)</span>
           </button>
 
           <button

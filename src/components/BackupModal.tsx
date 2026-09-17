@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { X, Database, Download, Upload, RefreshCw, FileSpreadsheet, ShieldCheck } from 'lucide-react';
 import { Customer, Loan, FollowUpLog } from '../types';
-import { exportLoansToCSV, exportReEligibilityReportCSV } from '../utils/exportCsv';
+import { exportLoansToCSV, exportFullPortfolioCSV } from '../utils/exportCsv';
 
 interface BackupModalProps {
   isOpen: boolean;
@@ -128,27 +128,27 @@ export const BackupModal: React.FC<BackupModalProps> = ({
             <div className="grid grid-cols-1 gap-2">
               <button
                 onClick={() => exportLoansToCSV(loans, customers)}
-                className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50/40 transition-colors text-left cursor-pointer"
+                className="w-full flex items-center justify-between p-3 rounded-xl border border-blue-200 bg-blue-50/40 hover:bg-blue-50/80 transition-colors text-left cursor-pointer"
               >
                 <div className="flex items-center gap-2.5">
-                  <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <FileSpreadsheet className="w-4 h-4 text-blue-600 shrink-0" />
                   <div>
-                    <p className="font-bold text-slate-800">Complete Loan Portfolio (.csv)</p>
-                    <p className="text-[11px] text-slate-500">All customer details, bank names, EMIs, and commissions</p>
+                    <p className="font-bold text-slate-800">Calling List: Name, Number, Loan Type (.csv)</p>
+                    <p className="text-[11px] text-slate-600">Clean 3-column list formatted for Excel without unneeded columns or scientific notation</p>
                   </div>
                 </div>
-                <Download className="w-4 h-4 text-slate-400" />
+                <Download className="w-4 h-4 text-blue-600" />
               </button>
 
               <button
-                onClick={() => exportReEligibilityReportCSV(loans)}
-                className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-amber-300 hover:bg-amber-50/40 transition-colors text-left cursor-pointer"
+                onClick={() => exportFullPortfolioCSV(loans, customers)}
+                className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-colors text-left cursor-pointer"
               >
                 <div className="flex items-center gap-2.5">
-                  <FileSpreadsheet className="w-4 h-4 text-amber-600 shrink-0" />
+                  <FileSpreadsheet className="w-4 h-4 text-slate-600 shrink-0" />
                   <div>
-                    <p className="font-bold text-slate-800">Re-Eligibility Calling List (.csv)</p>
-                    <p className="text-[11px] text-slate-500">Filtered list of clients ready for renewal & repeat loans</p>
+                    <p className="font-bold text-slate-800">Complete Full Portfolio Backup (.csv)</p>
+                    <p className="text-[11px] text-slate-500">Comprehensive raw backup with all accounts, banks, EMIs, and dates</p>
                   </div>
                 </div>
                 <Download className="w-4 h-4 text-slate-400" />
