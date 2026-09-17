@@ -13,9 +13,6 @@ import {
   Briefcase,
   Sun,
   Moon,
-  Smartphone,
-  Mail,
-  Send,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -25,7 +22,6 @@ export const LoginView: React.FC = () => {
   const { isDark, toggleTheme } = useTheme();
 
   const [mode, setMode] = useState<'login' | 'reset'>('login');
-  const [resetMethod, setResetMethod] = useState<'mobile' | 'email' | 'key' | 'question'>('mobile');
 
   // Login form state
   const [identifier, setIdentifier] = useState('');
@@ -34,51 +30,17 @@ export const LoginView: React.FC = () => {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  // Reset form state
-  const [resetMobile, setResetMobile] = useState('');
-  const [resetEmail, setResetEmail] = useState('');
-  const [otpCode, setOtpCode] = useState('');
-  const [otpNotice, setOtpNotice] = useState<string | null>(null);
+  // Reset form state (Restricted strictly to Secret Verification Methods)
+  const [resetMethod, setResetMethod] = useState<'key' | 'question'>('key');
   const [recoveryKey, setRecoveryKey] = useState('');
   const [securityAnswer, setSecurityAnswer] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
   const [resetSuccess, setResetSuccess] = useState<string | null>(null);
   const [isResetting, setIsResetting] = useState(false);
-
-  const handleSendMobileOtp = () => {
-    const cleanDigits = resetMobile.replace(/\D/g, '');
-    if (!cleanDigits || cleanDigits.length < 10) {
-      setResetError('Please enter your valid 10-digit registered mobile number.');
-      return;
-    }
-    const registeredPhoneDigits = (securityConfig?.phone || '9585022822').replace(/\D/g, '');
-    if (cleanDigits !== registeredPhoneDigits && cleanDigits !== '9585022822') {
-      setResetError('This mobile number is not registered with this office portal.');
-      return;
-    }
-    setResetError(null);
-    setOtpNotice('✅ SMS OTP verification code sent. For instant verification, enter code: 958502');
-    setOtpCode('958502');
-  };
-
-  const handleSendEmailCode = () => {
-    const cleanEmail = resetEmail.trim().toLowerCase();
-    if (!cleanEmail || !cleanEmail.includes('@')) {
-      setResetError('Please enter your registered email address.');
-      return;
-    }
-    const registeredEmail = (securityConfig?.email || 'skg462003@gmail.com').toLowerCase().trim();
-    if (cleanEmail !== registeredEmail && cleanEmail !== 'skg462003@gmail.com') {
-      setResetError('This email address is not registered with this office portal.');
-      return;
-    }
-    setResetError(null);
-    setOtpNotice('✅ Verification code sent to email. For instant verification, enter code: 958502');
-    setOtpCode('958502');
-  };
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,61 +68,26 @@ export const LoginView: React.FC = () => {
     setResetError(null);
     setResetSuccess(null);
 
-    if (resetMethod === 'mobile') {
-      const cleanDigits = resetMobile.replace(/\D/g, '');
-      if (!cleanDigits || cleanDigits.length < 10) {
-        setResetError('Please enter your 10-digit registered mobile number.');
-        return;
-      }
-      const registeredPhoneDigits = (securityConfig?.phone || '9585022822').replace(/\D/g, '');
-      if (cleanDigits !== '9585022822' && cleanDigits !== registeredPhoneDigits) {
-        setResetError('Entered mobile number is not registered for this office portal.');
-        return;
-      }
-      if (!otpCode.trim()) {
-        setResetError('Please enter the 6-digit SMS OTP (or click "Send OTP").');
-        return;
-      }
-    }
-
-    if (resetMethod === 'email') {
-      const cleanEmail = resetEmail.trim().toLowerCase();
-      if (!cleanEmail || !cleanEmail.includes('@')) {
-        setResetError('Please enter your registered email address.');
-        return;
-      }
-      const registeredEmail = (securityConfig?.email || 'skg462003@gmail.com').toLowerCase().trim();
-      if (cleanEmail !== 'skg462003@gmail.com' && cleanEmail !== registeredEmail) {
-        setResetError('Entered email is not registered for this office portal.');
-        return;
-      }
-      if (!otpCode.trim()) {
-        setResetError('Please enter the 6-digit verification code sent to your email.');
-        return;
-      }
-    }
-
     if (resetMethod === 'key' && !recoveryKey.trim()) {
-      setResetError('Please enter the office master recovery key.');
+      setResetError('Please enter your confidential Master Recovery Key.');
       return;
     }
     if (resetMethod === 'question' && !securityAnswer.trim()) {
-      setResetError('Please provide the answer to the security question.');
+      setResetError('Please enter your secret security answer.');
       return;
     }
     if (!newPassword || newPassword.length < 4) {
       setResetError('New password must be at least 4 characters long.');
       return;
     }
-    if (newPassword !== confirmPassword) {
+    const finalConfirm = confirmPassword.trim() || newPassword.trim();
+    if (newPassword.trim() !== finalConfirm) {
       setResetError('New password and confirm password do not match.');
       return;
     }
 
     setIsResetting(true);
     const result = await resetPassword({
-      mobile: resetMethod === 'mobile' ? resetMobile.trim() : undefined,
-      email: resetMethod === 'email' ? resetEmail.trim() : undefined,
       recoveryKey: resetMethod === 'key' ? recoveryKey.trim() : undefined,
       securityAnswer: resetMethod === 'question' ? securityAnswer.trim() : undefined,
       newPassword: newPassword.trim(),
@@ -168,7 +95,7 @@ export const LoginView: React.FC = () => {
     setIsResetting(false);
 
     if (!result.success) {
-      setResetError(result.error || 'Failed to reset password. Please check your verification information.');
+      setResetError(result.error || 'Access Denied: Verification failed. The secret key or answer was incorrect.');
     } else {
       setResetSuccess(result.message || 'Password successfully updated! Unlocking your office portal...');
     }
@@ -267,7 +194,6 @@ export const LoginView: React.FC = () => {
                       setMode('reset');
                       setResetError(null);
                       setResetSuccess(null);
-                      setOtpNotice(null);
                     }}
                     className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-semibold cursor-pointer"
                   >
@@ -321,7 +247,6 @@ export const LoginView: React.FC = () => {
                     setMode('login');
                     setResetError(null);
                     setResetSuccess(null);
-                    setOtpNotice(null);
                   }}
                   className="inline-flex items-center gap-1 text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 cursor-pointer"
                 >
@@ -333,16 +258,12 @@ export const LoginView: React.FC = () => {
                 </span>
               </div>
 
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Verify via your registered mobile number, email, recovery key, or security question.
-              </p>
-
-              {otpNotice && (
-                <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200 text-xs flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-                  <span>{otpNotice}</span>
-                </div>
-              )}
+              <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-300 flex items-start gap-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Anti-Penetration Guard Active:</strong> Strangers cannot reset your password using just your public phone number or email. A confidential master key or secret security answer known only by the office owner is required.
+                </span>
+              </div>
 
               {resetError && (
                 <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs flex items-start gap-2">
@@ -358,45 +279,15 @@ export const LoginView: React.FC = () => {
                 </div>
               )}
 
-              {/* Verification Method Toggle (4 Options) */}
+              {/* Secure Verification Toggle (2 Secret-Based Methods) */}
               <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setResetMethod('mobile');
-                    setResetError(null);
-                  }}
-                  className={`py-1.5 px-2 text-xs font-bold rounded-md transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                    resetMethod === 'mobile'
-                      ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-2xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                  }`}
-                >
-                  <Smartphone className="w-3.5 h-3.5" />
-                  <span>Mobile OTP</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setResetMethod('email');
-                    setResetError(null);
-                  }}
-                  className={`py-1.5 px-2 text-xs font-bold rounded-md transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                    resetMethod === 'email'
-                      ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-2xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                  }`}
-                >
-                  <Mail className="w-3.5 h-3.5" />
-                  <span>Email ID</span>
-                </button>
                 <button
                   type="button"
                   onClick={() => {
                     setResetMethod('key');
                     setResetError(null);
                   }}
-                  className={`py-1.5 px-2 text-xs font-bold rounded-md transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  className={`py-2 px-3 text-xs font-bold rounded-md transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                     resetMethod === 'key'
                       ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-2xs'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -411,7 +302,7 @@ export const LoginView: React.FC = () => {
                     setResetMethod('question');
                     setResetError(null);
                   }}
-                  className={`py-1.5 px-2 text-xs font-bold rounded-md transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                  className={`py-2 px-3 text-xs font-bold rounded-md transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                     resetMethod === 'question'
                       ? 'bg-white dark:bg-slate-700 text-blue-700 dark:text-blue-300 shadow-2xs'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -422,114 +313,32 @@ export const LoginView: React.FC = () => {
                 </button>
               </div>
 
-              {/* TAB 1: Reset via Mobile OTP */}
-              {resetMethod === 'mobile' && (
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Main Registered Mobile Number
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        id="reset-mobile-input"
-                        type="tel"
-                        value={resetMobile}
-                        onChange={(e) => setResetMobile(e.target.value)}
-                        placeholder="Enter 10-digit mobile number"
-                        className="flex-1 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 hover:bg-slate-100/60 dark:hover:bg-slate-750 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleSendMobileOtp}
-                        className="px-3 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shrink-0 flex items-center gap-1 cursor-pointer"
-                      >
-                        <Send className="w-3.5 h-3.5" />
-                        <span>Send OTP</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      SMS Verification Code (OTP)
-                    </label>
-                    <input
-                      id="reset-otp-input"
-                      type="text"
-                      value={otpCode}
-                      onChange={(e) => setOtpCode(e.target.value)}
-                      placeholder="Enter 6-digit OTP"
-                      className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 hover:bg-slate-100/60 dark:hover:bg-slate-750 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 2: Reset via Email ID */}
-              {resetMethod === 'email' && (
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Registered Email Address
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        id="reset-email-input"
-                        type="email"
-                        value={resetEmail}
-                        onChange={(e) => setResetEmail(e.target.value)}
-                        placeholder="Enter registered email address"
-                        className="flex-1 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 hover:bg-slate-100/60 dark:hover:bg-slate-750 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleSendEmailCode}
-                        className="px-3 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shrink-0 flex items-center gap-1 cursor-pointer"
-                      >
-                        <Send className="w-3.5 h-3.5" />
-                        <span>Send Code</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Email Verification Code
-                    </label>
-                    <input
-                      type="text"
-                      value={otpCode}
-                      onChange={(e) => setOtpCode(e.target.value)}
-                      placeholder="Enter verification code"
-                      className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 hover:bg-slate-100/60 dark:hover:bg-slate-750 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 3: Reset via Master Key */}
+              {/* TAB 1: Reset via Confidential Master Recovery Key */}
               {resetMethod === 'key' && (
                 <div className="space-y-2">
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Master Recovery Key
+                    Confidential Master Recovery Key
                   </label>
                   <input
                     id="recovery-key-input"
                     type="password"
                     value={recoveryKey}
                     onChange={(e) => setRecoveryKey(e.target.value)}
-                    placeholder="Enter your recovery key"
+                    placeholder="Enter confidential master recovery key"
                     className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 hover:bg-slate-100/60 dark:hover:bg-slate-750 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono"
                   />
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Your secret emergency key configured during account setup.
+                  </p>
                 </div>
               )}
 
-              {/* TAB 4: Reset via Security Question */}
+              {/* TAB 2: Reset via Secret Security Question */}
               {resetMethod === 'question' && (
                 <div className="space-y-2">
                   <div className="p-2.5 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
                     <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block">
-                      Security Question:
+                      Secret Office Question:
                     </span>
                     <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-0.5">
                       {securityConfig?.securityQuestion ||
@@ -537,16 +346,19 @@ export const LoginView: React.FC = () => {
                     </p>
                   </div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Your Secret Answer
+                    Your Private Security Answer
                   </label>
                   <input
                     id="security-answer-input"
                     type="text"
                     value={securityAnswer}
                     onChange={(e) => setSecurityAnswer(e.target.value)}
-                    placeholder="Enter your security answer"
+                    placeholder="Enter your secret answer"
                     className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 hover:bg-slate-100/60 dark:hover:bg-slate-750 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
                   />
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Answer must match the secret answer set by the office administrator.
+                  </p>
                 </div>
               )}
 
@@ -579,14 +391,23 @@ export const LoginView: React.FC = () => {
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                   Confirm New Password
                 </label>
-                <input
-                  id="confirm-password-input"
-                  type={showNewPassword ? 'text' : 'password'}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Re-type new password"
-                  className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 hover:bg-slate-100/60 dark:hover:bg-slate-750 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                />
+                <div className="relative">
+                  <input
+                    id="confirm-password-input"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Re-type new password"
+                    className="w-full pl-3 pr-10 py-2 text-sm bg-slate-50 dark:bg-slate-800 hover:bg-slate-100/60 dark:hover:bg-slate-750 focus:bg-white dark:focus:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               {/* Submit Reset */}

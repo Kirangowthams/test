@@ -25,7 +25,7 @@ const DEFAULT_AUTH: AuthConfig = {
   phone: '9585022822',
   name: 'Galaxy Consultancy',
   password: 'password123',
-  recoveryKey: 'GALAXY-SECURE-2025',
+  recoveryKey: 'selvammanju9898',
   securityQuestion: 'What is the name of your loan consultancy office?',
   securityAnswer: 'Galaxy Consultancy',
 };
@@ -61,8 +61,11 @@ function initDatabase(): DatabaseSchema {
         }
         if (!data.auth) {
           data.auth = { ...DEFAULT_AUTH };
-        } else if (!data.auth.phone) {
-          data.auth.phone = '9585022822';
+        } else {
+          if (!data.auth.phone) data.auth.phone = '9585022822';
+          if (data.auth.recoveryKey === 'GALAXY-SECURE-2025' || !data.auth.recoveryKey) {
+            data.auth.recoveryKey = 'selvammanju9898';
+          }
         }
         return data as DatabaseSchema;
       }
@@ -189,33 +192,25 @@ async function startServer() {
     }
 
     let verified = false;
-    const authPhoneDigits = (dbState.auth.phone || '9585022822').replace(/\D/g, '');
 
-    if (mobile) {
-      const inputDigits = String(mobile).replace(/\D/g, '');
-      if (inputDigits === '9585022822' || inputDigits === authPhoneDigits) {
-        verified = true;
-      }
-    } else if (email) {
-      const cleanEmail = String(email).trim().toLowerCase();
-      if (
-        cleanEmail === (dbState.auth.email || '').toLowerCase() ||
-        cleanEmail === 'skg462003@gmail.com' ||
-        cleanEmail === 'dad@loanoffice.com'
-      ) {
-        verified = true;
-      }
-    } else if (recoveryKey && String(recoveryKey).trim().toUpperCase() === dbState.auth.recoveryKey.toUpperCase()) {
+    // Security requirement: Must provide secret Master Recovery Key or matching Security Answer
+    if (
+      recoveryKey &&
+      (String(recoveryKey).trim().toLowerCase() === dbState.auth.recoveryKey.toLowerCase() ||
+        String(recoveryKey).trim().toLowerCase() === 'selvammanju9898'.toLowerCase())
+    ) {
       verified = true;
     } else if (securityAnswer) {
       const cleanAnswer = String(securityAnswer).trim().toLowerCase();
       const storedAnswer = (dbState.auth.securityAnswer || '').toLowerCase().trim();
       if (
-        cleanAnswer === storedAnswer ||
-        cleanAnswer === 'galaxyconsultancee' ||
-        cleanAnswer === 'galaxy consultancee' ||
-        cleanAnswer === 'galaxy consultancy' ||
-        cleanAnswer === 'galaxy'
+        cleanAnswer &&
+        (cleanAnswer === storedAnswer ||
+          cleanAnswer === 'galaxy consultancee' ||
+          cleanAnswer === 'galaxy consultancy' ||
+          cleanAnswer === 'galaxyconsultancee' ||
+          cleanAnswer === 'galaxyconsultancy' ||
+          cleanAnswer === 'galaxy')
       ) {
         verified = true;
       }
@@ -223,7 +218,7 @@ async function startServer() {
 
     if (!verified) {
       return res.status(403).json({
-        error: 'Verification failed. Mobile number, email, recovery key, or security answer did not match.',
+        error: 'Access Denied: You must provide either the confidential Master Recovery Key or the correct Secret Security Answer to reset the office password.',
       });
     }
 

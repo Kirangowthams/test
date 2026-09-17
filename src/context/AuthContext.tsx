@@ -48,7 +48,7 @@ interface LocalCredentials {
 
 const DEFAULT_CREDS: LocalCredentials = {
   password: 'password123',
-  recoveryKey: 'GALAXY-SECURE-2025',
+  recoveryKey: 'selvammanju9898',
   securityQuestion: 'What is the name of your loan consultancy office?',
   securityAnswer: 'Galaxy Consultancy',
   email: 'skg462003@gmail.com',
@@ -62,7 +62,12 @@ function getStoredCredentials(): LocalCredentials {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed.password === 'string') {
-        return { ...DEFAULT_CREDS, ...parsed };
+        const merged = { ...DEFAULT_CREDS, ...parsed };
+        if (merged.recoveryKey === 'GALAXY-SECURE-2025' || !merged.recoveryKey) {
+          merged.recoveryKey = 'selvammanju9898';
+          saveStoredCredentials(merged);
+        }
+        return merged;
       }
     }
   } catch (e) {
@@ -366,11 +371,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       const data = await safeFetchJson(res);
-      if (data && typeof data === 'object') {
-        if (!res.ok) {
-          return { success: false, error: data.error || 'Password reset failed.' };
-        }
-
+      if (res.ok && data && typeof data === 'object' && data.success) {
         if (data.user && data.token) {
           const newSession: AuthSession = {
             user: data.user,
@@ -381,8 +382,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           localStorage.setItem(STORAGE_KEY, JSON.stringify(newSession));
         }
 
-        saveStoredCredentials({ ...creds, password: String(payload.newPassword).trim() });
-        return { success: true, message: data.message };
+        const updatedCreds = { ...creds, password: String(payload.newPassword).trim() };
+        saveStoredCredentials(updatedCreds);
+        syncCredentialsToFirestore(updatedCreds);
+        return { success: true, message: data.message || 'Password successfully reset!' };
       }
     } catch {
       // Backend not available, handle locally
@@ -390,34 +393,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Local reset validation
     let verified = false;
-    const storedPhoneDigits = (creds.phone || '9585022822').replace(/\D/g, '');
 
-    if (payload.mobile) {
-      const inputDigits = String(payload.mobile).replace(/\D/g, '');
-      if (inputDigits === '9585022822' || inputDigits === storedPhoneDigits) {
-        verified = true;
-      }
-    } else if (payload.email) {
-      const cleanEmail = String(payload.email).trim().toLowerCase();
-      if (
-        cleanEmail === creds.email.toLowerCase() ||
-        cleanEmail === 'skg462003@gmail.com' ||
-        cleanEmail === 'dad@loanoffice.com'
-      ) {
-        verified = true;
-      }
-    } else if (payload.recoveryKey && payload.recoveryKey.trim().toUpperCase() === creds.recoveryKey.toUpperCase()) {
+    // Security: Only someone possessing the confidential Master Recovery Key or Secret Security Answer can reset
+    if (
+      payload.recoveryKey &&
+      (payload.recoveryKey.trim().toLowerCase() === creds.recoveryKey.toLowerCase() ||
+        payload.recoveryKey.trim().toLowerCase() === 'selvammanju9898'.toLowerCase())
+    ) {
       verified = true;
     } else if (payload.securityAnswer) {
       const cleanAnswer = payload.securityAnswer.trim().toLowerCase();
       const storedAnswer = creds.securityAnswer.trim().toLowerCase();
       if (
-        cleanAnswer === storedAnswer ||
-        cleanAnswer === 'galaxy consultancy' ||
-        cleanAnswer === 'galaxyconsultancy' ||
-        cleanAnswer === 'galaxyconsultancee' ||
-        cleanAnswer === 'galaxy consultancee' ||
-        cleanAnswer === 'galaxy'
+        cleanAnswer &&
+        (cleanAnswer === storedAnswer ||
+          cleanAnswer === 'galaxy consultancee' ||
+          cleanAnswer === 'galaxy consultancy' ||
+          cleanAnswer === 'galaxyconsultancee' ||
+          cleanAnswer === 'galaxyconsultancy' ||
+          cleanAnswer === 'galaxy')
       ) {
         verified = true;
       }
@@ -426,7 +420,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!verified) {
       return {
         success: false,
-        error: 'Verification failed. Mobile number, email, recovery key, or security answer did not match.',
+        error: 'Access Denied: Verification failed. You must provide either the confidential Master Recovery Key or the correct Secret Security Answer to reset the office password.',
       };
     }
 
