@@ -198,7 +198,7 @@ export const LoanModal: React.FC<LoanModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-      <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden my-8">
+      <div className="bg-white text-slate-900 rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden my-8">
         {/* Modal Header */}
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
           <div>
@@ -255,17 +255,17 @@ export const LoanModal: React.FC<LoanModalProps> = ({
 
               {!isNewCustomer ? (
                 <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                     Select Customer from Office Database
                   </label>
                   <select
                     value={selectedCustomerId}
                     onChange={(e) => setSelectedCustomerId(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer"
+                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer"
                     required
                   >
                     {customers.map((c) => (
-                      <option key={c.id} value={c.id}>
+                      <option key={c.id} value={c.id} className="text-slate-900">
                         {c.name} — {c.mobile} ({c.city || 'Client'})
                       </option>
                     ))}
@@ -274,7 +274,7 @@ export const LoanModal: React.FC<LoanModalProps> = ({
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 text-xs">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                       Customer Full Name *
                     </label>
                     <input
@@ -283,12 +283,12 @@ export const LoanModal: React.FC<LoanModalProps> = ({
                       onChange={(e) => setCustName(e.target.value)}
                       placeholder="e.g. Rajesh Kumar"
                       required={isNewCustomer}
-                      className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-900 font-semibold placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                       Primary Mobile Number *
                     </label>
                     <input
@@ -297,12 +297,12 @@ export const LoanModal: React.FC<LoanModalProps> = ({
                       onChange={(e) => setCustMobile(e.target.value)}
                       placeholder="e.g. +91 98765 43210"
                       required={isNewCustomer}
-                      className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-900 font-semibold font-mono placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                       Alternate Phone (Optional)
                     </label>
                     <input
@@ -310,40 +310,40 @@ export const LoanModal: React.FC<LoanModalProps> = ({
                       value={custAltPhone}
                       onChange={(e) => setCustAltPhone(e.target.value)}
                       placeholder="e.g. +91 94112 33445"
-                      className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-900 font-semibold font-mono placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">City / Area</label>
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">City / Area</label>
                     <input
                       type="text"
                       value={custCity}
                       onChange={(e) => setCustCity(e.target.value)}
                       placeholder="e.g. Mumbai, Surat, Delhi"
-                      className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-900 font-semibold placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                       Employment / Business Type
                     </label>
                     <select
                       value={custEmployment}
                       onChange={(e) => setCustEmployment(e.target.value as EmploymentType)}
-                      className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-900 font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
                     >
-                      <option value="Salaried">Salaried</option>
-                      <option value="Self-Employed / Business">Self-Employed / Business</option>
-                      <option value="Professional (Doctor/CA/Lawyer)">Professional (Doctor/CA/Lawyer)</option>
-                      <option value="Trader / Merchant">Trader / Merchant</option>
-                      <option value="Other">Other</option>
+                      <option value="Salaried" className="text-slate-900">Salaried</option>
+                      <option value="Self-Employed / Business" className="text-slate-900">Self-Employed / Business</option>
+                      <option value="Professional (Doctor/CA/Lawyer)" className="text-slate-900">Professional (Doctor/CA/Lawyer)</option>
+                      <option value="Trader / Merchant" className="text-slate-900">Trader / Merchant</option>
+                      <option value="Other" className="text-slate-900">Other</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                       Monthly Income (Approx)
                     </label>
                     <input
@@ -351,7 +351,7 @@ export const LoanModal: React.FC<LoanModalProps> = ({
                       value={custIncome}
                       onChange={(e) => setCustIncome(e.target.value)}
                       placeholder="e.g. 85000"
-                      className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-900 font-semibold placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-1 focus:ring-blue-500"
                     />
                   </div>
                 </div>
@@ -361,21 +361,21 @@ export const LoanModal: React.FC<LoanModalProps> = ({
 
           {/* SECTION 2: BANK & LOAN FACILITY */}
           <div className="space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
               <Building2 className="w-4 h-4 text-indigo-600" />
               <span>Loan & Bank Details</span>
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">Bank / NBFC Name *</label>
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1">Bank / NBFC Name *</label>
                 <select
                   value={bankName}
                   onChange={(e) => setBankName(e.target.value)}
-                  className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-900 font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
                 >
                   {bankOptions.map((b) => (
-                    <option key={b} value={b}>
+                    <option key={b} value={b} className="text-slate-900">
                       {b}
                     </option>
                   ))}
@@ -386,32 +386,32 @@ export const LoanModal: React.FC<LoanModalProps> = ({
                     value={customBankName}
                     onChange={(e) => setCustomBankName(e.target.value)}
                     placeholder="Enter Lender Name"
-                    className="mt-1 w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="mt-1 w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-900 font-semibold placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-1 focus:ring-blue-500"
                     required
                   />
                 )}
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">Loan Category *</label>
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1">Loan Category *</label>
                 <select
                   value={loanType}
                   onChange={(e) => setLoanType(e.target.value as LoanType)}
-                  className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-900 font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
                 >
-                  <option value="Personal Loan">Personal Loan</option>
-                  <option value="Business Loan">Business Loan</option>
-                  <option value="Home Loan">Home Loan</option>
-                  <option value="Loan Against Property (LAP)">Loan Against Property (LAP)</option>
-                  <option value="Vehicle Loan">Vehicle Loan</option>
-                  <option value="Gold Loan">Gold Loan</option>
-                  <option value="Education Loan">Education Loan</option>
-                  <option value="Micro Loan">Micro Loan</option>
+                  <option value="Personal Loan" className="text-slate-900">Personal Loan</option>
+                  <option value="Business Loan" className="text-slate-900">Business Loan</option>
+                  <option value="Home Loan" className="text-slate-900">Home Loan</option>
+                  <option value="Loan Against Property (LAP)" className="text-slate-900">Loan Against Property (LAP)</option>
+                  <option value="Vehicle Loan" className="text-slate-900">Vehicle Loan</option>
+                  <option value="Gold Loan" className="text-slate-900">Gold Loan</option>
+                  <option value="Education Loan" className="text-slate-900">Education Loan</option>
+                  <option value="Micro Loan" className="text-slate-900">Micro Loan</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
                   Loan Account / LAN No.
                 </label>
                 <input
@@ -419,7 +419,7 @@ export const LoanModal: React.FC<LoanModalProps> = ({
                   value={accountNumber}
                   onChange={(e) => setAccountNumber(e.target.value)}
                   placeholder="e.g. HDFC-PL-19203"
-                  className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-900 font-semibold placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>
             </div>
@@ -496,7 +496,7 @@ export const LoanModal: React.FC<LoanModalProps> = ({
                   value={disbursalDate}
                   onChange={(e) => setDisbursalDate(e.target.value)}
                   required
-                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>
 
@@ -508,7 +508,7 @@ export const LoanModal: React.FC<LoanModalProps> = ({
                   type="date"
                   value={maturityDate}
                   onChange={(e) => setMaturityDate(e.target.value)}
-                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg font-semibold text-indigo-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg font-bold text-indigo-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>
 
@@ -519,12 +519,12 @@ export const LoanModal: React.FC<LoanModalProps> = ({
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value as LoanStatus)}
-                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
                 >
-                  <option value="Active">Active</option>
-                  <option value="Near Maturity">Near Maturity</option>
-                  <option value="Completed">Completed / Finished</option>
-                  <option value="Pre-Closed">Pre-Closed</option>
+                  <option value="Active" className="text-slate-900">Active</option>
+                  <option value="Near Maturity" className="text-slate-900">Near Maturity</option>
+                  <option value="Completed" className="text-slate-900">Completed / Finished</option>
+                  <option value="Pre-Closed" className="text-slate-900">Pre-Closed</option>
                 </select>
               </div>
             </div>
@@ -569,7 +569,7 @@ export const LoanModal: React.FC<LoanModalProps> = ({
                     type="number"
                     value={commissionAmount}
                     onChange={(e) => setCommissionAmount(e.target.value)}
-                    className="w-full pl-7 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg font-bold text-emerald-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="w-full pl-7 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg font-bold text-emerald-900 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                   />
                 </div>
               </div>
@@ -581,10 +581,10 @@ export const LoanModal: React.FC<LoanModalProps> = ({
                 <select
                   value={commissionStatus}
                   onChange={(e) => setCommissionStatus(e.target.value as CommissionStatus)}
-                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 font-semibold focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
                 >
-                  <option value="Pending">Pending from Bank</option>
-                  <option value="Received">Received / Cleared</option>
+                  <option value="Pending" className="text-slate-900">Pending from Bank</option>
+                  <option value="Received" className="text-slate-900">Received / Cleared</option>
                 </select>
               </div>
             </div>
@@ -592,7 +592,7 @@ export const LoanModal: React.FC<LoanModalProps> = ({
 
           {/* Notes */}
           <div>
-            <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
               Office Notes / Future Loan Requirements
             </label>
             <textarea
@@ -600,7 +600,7 @@ export const LoanModal: React.FC<LoanModalProps> = ({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="e.g. Customer wants to take home loan after this personal loan finishes. Prompt payer."
-              className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs text-slate-900 font-medium placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
 

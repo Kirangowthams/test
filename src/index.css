@@ -2,6 +2,27 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* High-contrast form controls: ensure inputs, selects, and textareas always have dark, visible text by default */
+input, select, textarea {
+  color: #0f172a; /* slate-900 */
+}
+
+/* Explicit dark surface input overrides when an input is deliberately placed on a dark background */
+.dark input.dark\:text-slate-100,
+.dark input.dark\:text-white,
+.dark select.dark\:text-slate-100,
+.dark select.dark\:text-white,
+.dark textarea.dark\:text-slate-100,
+.dark textarea.dark\:text-white {
+  color: #f1f5f9;
+}
+
+/* Clear, legible placeholders */
+input::placeholder, textarea::placeholder {
+  color: #64748b; /* slate-500 */
+  opacity: 0.85;
+}
+
 @media print {
   @page {
     size: A4 portrait;

@@ -63,7 +63,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, onClose, c
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-      <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden my-8">
+      <div className="bg-white text-slate-900 rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden my-8">
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
           <div className="flex items-center gap-2">
             <User className="w-4 h-4 text-blue-600" />
@@ -85,7 +85,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, onClose, c
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
 
@@ -97,7 +97,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, onClose, c
                 value={mobile}
                 onChange={(e) => setMobile(e.target.value)}
                 required
-                className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
+                className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
               />
             </div>
             <div>
@@ -106,7 +106,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, onClose, c
                 type="tel"
                 value={altPhone}
                 onChange={(e) => setAltPhone(e.target.value)}
-                className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
+                className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
               />
             </div>
           </div>
@@ -118,7 +118,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, onClose, c
                 type="text"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
-                className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
             <div>
@@ -128,7 +128,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, onClose, c
                 value={panOrId}
                 onChange={(e) => setPanOrId(e.target.value)}
                 placeholder="e.g. ABCPS1234F"
-                className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 uppercase font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 uppercase font-mono font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
           </div>
@@ -139,13 +139,13 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, onClose, c
               <select
                 value={employmentType}
                 onChange={(e) => setEmploymentType(e.target.value as EmploymentType)}
-                className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
               >
-                <option value="Salaried">Salaried</option>
-                <option value="Self-Employed / Business">Self-Employed / Business</option>
-                <option value="Professional (Doctor/CA/Lawyer)">Professional (Doctor/CA/Lawyer)</option>
-                <option value="Trader / Merchant">Trader / Merchant</option>
-                <option value="Other">Other</option>
+                <option value="Salaried" className="text-slate-900">Salaried</option>
+                <option value="Self-Employed / Business" className="text-slate-900">Self-Employed / Business</option>
+                <option value="Professional (Doctor/CA/Lawyer)" className="text-slate-900">Professional (Doctor/CA/Lawyer)</option>
+                <option value="Trader / Merchant" className="text-slate-900">Trader / Merchant</option>
+                <option value="Other" className="text-slate-900">Other</option>
               </select>
             </div>
             <div>
@@ -154,7 +154,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, onClose, c
                 type="number"
                 value={monthlyIncome}
                 onChange={(e) => setMonthlyIncome(e.target.value)}
-                className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
           </div>
@@ -165,7 +165,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, onClose, c
               type="text"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-slate-900 font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
 
@@ -176,7 +176,7 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({ isOpen, onClose, c
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="e.g. Prompt payer, owns a retail shop, looking for machinery loan next"
-              className="w-full bg-white border border-slate-300 rounded-lg p-2 text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full bg-white border border-slate-300 rounded-lg p-2 text-slate-900 font-medium placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
 

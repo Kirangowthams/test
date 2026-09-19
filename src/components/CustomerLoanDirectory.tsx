@@ -504,16 +504,16 @@ export const CustomerLoanDirectory: React.FC<CustomerLoanDirectoryProps> = ({
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1 text-xs">
               {/* Bank Filter */}
               <div>
-                <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Bank</label>
+                <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">Bank</label>
                 <select
                   id="filter-bank"
                   value={bankFilter}
                   onChange={(e) => setBankFilter(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                  className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-900 font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
                 >
-                  <option value="ALL">All Partner Banks</option>
+                  <option value="ALL" className="text-slate-900">All Partner Banks</option>
                   {banksList.map((b) => (
-                    <option key={b} value={b}>
+                    <option key={b} value={b} className="text-slate-900">
                       {b}
                     </option>
                   ))}
@@ -522,53 +522,53 @@ export const CustomerLoanDirectory: React.FC<CustomerLoanDirectoryProps> = ({
 
               {/* Loan Type */}
               <div>
-                <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Loan Type</label>
+                <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">Loan Type</label>
                 <select
                   id="filter-type"
                   value={typeFilter}
                   onChange={(e) => setTypeFilter(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                  className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-900 font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
                 >
-                  <option value="ALL">All Loan Types</option>
-                  <option value="Personal Loan">Personal Loan</option>
-                  <option value="Business Loan">Business Loan</option>
-                  <option value="Home Loan">Home Loan</option>
-                  <option value="Loan Against Property (LAP)">Loan Against Property (LAP)</option>
-                  <option value="Vehicle Loan">Vehicle Loan</option>
-                  <option value="Gold Loan">Gold Loan</option>
-                  <option value="Education Loan">Education Loan</option>
+                  <option value="ALL" className="text-slate-900">All Loan Types</option>
+                  <option value="Personal Loan" className="text-slate-900">Personal Loan</option>
+                  <option value="Business Loan" className="text-slate-900">Business Loan</option>
+                  <option value="Home Loan" className="text-slate-900">Home Loan</option>
+                  <option value="Loan Against Property (LAP)" className="text-slate-900">Loan Against Property (LAP)</option>
+                  <option value="Vehicle Loan" className="text-slate-900">Vehicle Loan</option>
+                  <option value="Gold Loan" className="text-slate-900">Gold Loan</option>
+                  <option value="Education Loan" className="text-slate-900">Education Loan</option>
                 </select>
               </div>
 
               {/* Loan Status */}
               <div>
-                <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Loan Status</label>
+                <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">Loan Status</label>
                 <select
                   id="filter-status"
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                  className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-900 font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
                 >
-                  <option value="ALL">All Statuses</option>
-                  <option value="Active">Active</option>
-                  <option value="Near Maturity">Near Maturity</option>
-                  <option value="Completed">Completed / Closed</option>
-                  <option value="Pre-Closed">Pre-Closed</option>
+                  <option value="ALL" className="text-slate-900">All Statuses</option>
+                  <option value="Active" className="text-slate-900">Active</option>
+                  <option value="Near Maturity" className="text-slate-900">Near Maturity</option>
+                  <option value="Completed" className="text-slate-900">Completed / Closed</option>
+                  <option value="Pre-Closed" className="text-slate-900">Pre-Closed</option>
                 </select>
               </div>
 
               {/* Bank Commission */}
               <div>
-                <label className="block text-[10px] font-semibold text-slate-500 uppercase mb-1">Bank Payout</label>
+                <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">Bank Payout</label>
                 <select
                   id="filter-commission"
                   value={commissionFilter}
                   onChange={(e) => setCommissionFilter(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                  className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-900 font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
                 >
-                  <option value="ALL">All Payouts</option>
-                  <option value="Pending">Pending from Bank</option>
-                  <option value="Received">Received / Cleared</option>
+                  <option value="ALL" className="text-slate-900">All Payouts</option>
+                  <option value="Pending" className="text-slate-900">Pending from Bank</option>
+                  <option value="Received" className="text-slate-900">Received / Cleared</option>
                 </select>
               </div>
             </div>
